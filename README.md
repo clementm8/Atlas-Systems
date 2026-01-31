@@ -1,194 +1,234 @@
-# SecureVault - Median.co Plugin Demo
+# Atlas Systems - Home Security Management
 
-A demonstration app showcasing Median.co's native plugin capabilities: **Biometric Authentication**, **DataStore**, and **Push Notifications**.
+A smart home security management app demonstrating Median.co's native plugin capabilities: **Biometric Authentication**, **DataStore**, and **Push Notifications**.
 
 ## Overview
 
-SecureVault is a secure notes application that demonstrates how web apps can leverage native device features through Median's JavaScript Bridge. This project was built for the Median.co Solutions Engineer technical exercise.
+Atlas Systems is a home security dashboard that showcases how web apps can leverage native device features through Median's JavaScript Bridge. Built for the Median.co Solutions Engineer technical exercise.
 
-### Features Demonstrated
+### Plugin Integration
 
-| Plugin | Feature | Implementation |
-|--------|---------|----------------|
-| **Biometrics** | Face ID / Touch ID | Secure app unlock with native biometric prompt |
-| **DataStore** | Encrypted local storage | Persist user notes across app sessions |
-| **OneSignal** | Push notifications | Register device and receive push alerts |
+| Plugin | Feature | Use Case |
+|--------|---------|----------|
+| **Biometrics** | Face ID / Touch ID | Secure login to security dashboard |
+| **DataStore** | Encrypted local storage | Store user profile & activity log |
+| **OneSignal** | Push notifications | Real-time security alerts (motion, doors, cameras) |
+
+## Features
+
+### Security Dashboard
+- **System Status** — View armed/disarmed state, doors, cameras, sensors
+- **Activity Feed** — Recent security events with timestamps and locations
+- **Quick Actions** — Arm/disarm system, view cameras, access history
+
+### User Profile (DataStore Demo)
+- Store user name, email, phone, address
+- Emergency contact information
+- Persists across app sessions via Median DataStore
+
+### Security Alerts (Push Demo)
+- Motion detection notifications
+- Door/window activity alerts
+- Camera event notifications
+- System status changes
+
+### Biometric Login
+- Face ID (iOS) / Touch ID support
+- Secure session management
+- Automatic re-authentication
 
 ## Quick Start
 
 ### 1. Deploy the Web App
 
-Deploy this project to a publicly accessible URL. Recommended options:
-
-**Vercel (Fastest)**
+**Vercel (Recommended)**
 ```bash
-# Install Vercel CLI
-npm i -g vercel
-
-# Deploy
 cd "Median Site"
-vercel
+npx vercel
 ```
 
 **Netlify**
-- Drag and drop the folder to [netlify.com/drop](https://app.netlify.com/drop)
-
-**GitHub Pages**
-- Push to GitHub and enable Pages in repository settings
+- Drag folder to [netlify.com/drop](https://app.netlify.com/drop)
 
 ### 2. Create App in Median App Studio
 
 1. Go to [median.co/new](https://median.co/new)
-2. Enter your deployed URL (e.g., `https://your-app.vercel.app`)
-3. Configure basic settings:
-   - **App Name**: SecureVault
-   - **App Icon**: Upload a custom icon or use default
-   - **Splash Screen**: Configure loading screen
+2. Enter your deployed URL
+3. Configure app settings:
+   - **App Name**: Atlas Systems
+   - **App Icon**: Security/shield icon
+   - **Theme**: Dark mode recommended
 
 ### 3. Enable Native Plugins
-
-In the Median App Studio sidebar, enable these plugins:
 
 #### Biometric Authentication
 - Navigate to **Native Plugins** → **Biometric Auth**
 - Enable the plugin
-- No additional configuration required
 
 #### DataStore
 - Navigate to **Native Plugins** → **DataStore**
 - Enable the plugin
-- Data is automatically encrypted on device
 
 #### Push Notifications (OneSignal)
 - Navigate to **Native Plugins** → **OneSignal**
-- You'll need a OneSignal account and App ID
-- Create an app at [onesignal.com](https://onesignal.com)
-- Enter your OneSignal App ID in Median settings
+- Create app at [onesignal.com](https://onesignal.com)
+- Enter OneSignal App ID
 
 ### 4. Build & Test
 
 1. Click **Build** in Median App Studio
-2. Download the development build:
-   - **iOS**: Install via TestFlight or direct download
-   - **Android**: Download APK and install
-3. Test biometrics on a physical device (simulators have limited biometric support)
+2. Download dev build to your device
+3. Test biometrics on physical device
 
 ## Project Structure
 
 ```
 Median Site/
-├── index.html      # Main app HTML structure
-├── styles.css      # Dark vault theme & responsive design
-├── app.js          # Median JavaScript Bridge integration
-└── README.md       # This file
+├── index.html      # Dashboard UI, lock screen, panels
+├── styles.css      # Dark security theme, responsive
+├── app.js          # Median plugin integration
+└── README.md       # Documentation
 ```
 
-## JavaScript Bridge API Reference
+## JavaScript Bridge API
 
 ### Biometrics
-
 ```javascript
 // Check availability
 const status = await median.auth.status();
-// Returns: { hasTouchId: boolean, hasFaceId: boolean, hasSecret: boolean }
+// { hasTouchId: bool, hasFaceId: bool, hasSecret: bool }
 
-// Save secret with biometric protection
-await median.auth.save({ secret: 'your-token' });
+// Save credential
+await median.auth.save({ secret: 'session-token' });
 
-// Retrieve secret (triggers biometric prompt)
+// Authenticate (triggers biometric prompt)
 const result = await median.auth.get();
-// Returns: { success: boolean, secret: string }
+// { success: bool, secret: string }
 ```
 
 ### DataStore
-
 ```javascript
-// Save data
+// Save user profile
 await median.datastore.set({
-    key: 'my_key',
-    value: JSON.stringify(data)
+    key: 'atlas_user_profile',
+    value: JSON.stringify({
+        name: 'John Doe',
+        email: 'john@example.com',
+        phone: '555-0123',
+        address: '123 Main St',
+        emergencyContact: '555-0911'
+    })
 });
 
-// Retrieve data
-const result = await median.datastore.get({ key: 'my_key' });
-const data = JSON.parse(result.value);
+// Load user profile
+const result = await median.datastore.get({ key: 'atlas_user_profile' });
+const profile = JSON.parse(result.value);
 ```
 
-### Push Notifications (OneSignal)
-
+### Push Notifications
 ```javascript
-// Register for push
+// Register device
 await median.onesignal.register();
 
-// Get subscription info
+// Get device ID
 const info = await median.onesignal.info();
-// Returns: { oneSignalUserId: string, ... }
+// { oneSignalUserId: 'player-id-here' }
 
-// Handle incoming notifications
+// Handle incoming alerts
 median.onesignal.receive = function(data) {
-    console.log('Notification:', data);
+    // data: { title, body, ... }
+    console.log('Security alert:', data.title);
 };
 ```
 
-## Technical Tradeoffs & Decisions
+## Technical Decisions
 
-### Why Build a Custom Demo Site?
+### Why Home Security?
 
-Rather than wrapping an existing website, I built a custom demo to:
-1. Have full control over JavaScript Bridge integration
-2. Demonstrate a cohesive user flow across all three plugins
-3. Show meaningful plugin usage (not just "it works")
+Home security is the ideal use case for these three plugins:
+
+1. **Biometrics** — Users expect and trust biometric authentication for security apps. It's not just convenient; it's essential.
+
+2. **DataStore** — User profiles and activity logs need reliable local persistence. Security data shouldn't depend on network availability.
+
+3. **Push Notifications** — Real-time alerts are the core value proposition. Motion detected at 2 AM? You need to know immediately, even if the app is closed.
 
 ### Browser Fallback Strategy
 
-The app gracefully degrades when running in a browser:
-- Biometrics → Shows "Demo Mode" button
-- DataStore → Falls back to localStorage
-- Push → Shows "Requires Median app" message
+The app gracefully degrades in browsers:
+- **Biometrics** → "Enter Dashboard" button (demo mode)
+- **DataStore** → Falls back to localStorage
+- **Push** → Shows "Requires Median app" message
 
-This allows testing UI without a physical device while making it clear that native features require the Median app.
+This enables UI testing without a physical device.
 
-### Security Considerations
+### Data Model
 
-- Biometric secrets are stored in the device's secure enclave
-- DataStore values are encrypted at rest
-- No sensitive data is transmitted to external servers (demo mode)
+**User Profile** (stored in DataStore):
+```json
+{
+    "name": "string",
+    "email": "string", 
+    "phone": "string",
+    "address": "string",
+    "emergencyContact": "string"
+}
+```
 
-### What I'd Add With More Time
-
-1. **Offline Support**: Service worker for offline access
-2. **Native Navigation**: Bottom tab bar using Median's native nav
-3. **Rich Notifications**: Deep linking from push notifications
-4. **Search**: Full-text search across encrypted notes
-5. **Export**: Encrypted backup/restore functionality
-6. **Theming**: Light mode option with system preference detection
+**Activity Event** (stored in DataStore):
+```json
+{
+    "id": "string",
+    "type": "motion|door|camera|sensor|system|custom",
+    "title": "string",
+    "content": "string",
+    "location": "string",
+    "createdAt": "timestamp",
+    "updatedAt": "timestamp"
+}
+```
 
 ## Debrief Talking Points
 
-### Why SecureVault?
+### Why Atlas Systems?
 
-A secure notes app is an ideal demo because:
-- **Biometrics make sense**: Users expect security for private notes
-- **Persistence is essential**: Notes must survive app restarts
-- **Push adds value**: Reminders, sharing notifications
+> "I chose a home security app because it creates a compelling narrative for all three plugins. Biometrics for secure access, DataStore for user preferences and event history, and push notifications for real-time security alerts. It's a use case where native features aren't just nice-to-have—they're essential."
 
 ### Plugin Selection Rationale
 
-These three plugins represent the core value proposition of going native:
-- **Security** (biometrics) - Can't be done in a browser
-- **Reliability** (datastore) - More reliable than web storage
-- **Engagement** (push) - Works when app is closed
+| Plugin | Why It Matters |
+|--------|---------------|
+| **Biometrics** | Security apps demand secure authentication. Passwords aren't enough. |
+| **DataStore** | Activity logs and user info must persist reliably, even offline. |
+| **Push** | Real-time alerts are the entire point of a security app. |
 
-### How I'd Explain This to a Customer
+### Technical Tradeoffs
 
-> "Your web app already works on mobile browsers, but Median lets you add the features that make users *prefer* native apps—secure login with Face ID, reliable offline storage, and push notifications that reach users even when they're not actively using the app. And you don't need to hire iOS/Android developers or maintain separate codebases."
+1. **Local-first architecture** — All data stored on device for privacy and offline access. A production app would sync to a backend.
+
+2. **Demo data on first launch** — Pre-populated activity feed shows the UI's potential without requiring real security hardware.
+
+3. **Event type categorization** — Structured activity types (motion, door, camera, etc.) enable icon differentiation and potential filtering.
+
+### With More Time
+
+- **Camera Integration** — Live feed from IP cameras via native plugin
+- **Geofencing** — Auto-arm when leaving home
+- **HomeKit/Google Home** — Native smart home integrations
+- **Encrypted Backup** — Cloud sync of activity history
+- **Family Access** — Multi-user support with different permission levels
+
+### Customer Explanation
+
+> "Atlas Systems shows how Median transforms a web dashboard into a native security app. The biometric login gives users confidence their security data is protected. The DataStore keeps their profile and activity history available instantly, even offline. And push notifications mean they'll never miss a security alert—whether it's motion at the front door or a sensor going offline. All of this without writing a single line of Swift or Kotlin."
 
 ## Resources
 
 - [Median Documentation](https://docs.median.co)
 - [JavaScript Bridge Reference](https://docs.median.co/docs/javascript-bridge)
-- [OneSignal Setup Guide](https://docs.median.co/docs/onesignal)
 - [Biometric Auth Docs](https://docs.median.co/docs/biometric-authentication)
+- [DataStore Docs](https://docs.median.co/docs/datastore)
+- [OneSignal Setup](https://docs.median.co/docs/onesignal)
 
 ---
 
