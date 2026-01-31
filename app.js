@@ -426,24 +426,18 @@ async function initBiometrics() {
     if (!AppState.isMedianApp) return;
     
     try {
+        // median.auth.status() returns native device info:
+        // { hasFaceId: bool, hasTouchId: bool, hasSecret: bool }
         const status = await median.auth.status();
         console.log('Biometric status:', status);
         
         AppState.biometricAvailable = status.hasTouchId || status.hasFaceId;
         AppState.hasBiometrics = status.hasSecret;
         
-        // Determine biometric type - check Face ID first
-        // On iOS, use device detection as fallback since some SDKs report incorrectly
         if (status.hasFaceId) {
             AppState.biometricType = 'faceId';
         } else if (status.hasTouchId) {
-            // Double check - iPhones X and later have Face ID
-            // Use device detection to confirm
-            if (isFaceIdDevice()) {
-                AppState.biometricType = 'faceId';
-            } else {
-                AppState.biometricType = 'touchId';
-            }
+            AppState.biometricType = 'touchId';
         }
         
         console.log('Biometric type detected:', AppState.biometricType);
@@ -458,32 +452,6 @@ async function initBiometrics() {
         console.error('Biometric init error:', error);
         determineAuthScreen();
     }
-}
-
-// Helper function to detect if device likely has Face ID
-function isFaceIdDevice() {
-    // Check if iOS device
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    if (!isIOS) return false;
-    
-    // Check screen dimensions - Face ID devices have notch/Dynamic Island
-    // iPhone X and later have screen ratios around 2.16 or higher
-    const screenRatio = window.screen.height / window.screen.width;
-    const reverseRatio = window.screen.width / window.screen.height;
-    const ratio = Math.max(screenRatio, reverseRatio);
-    
-    // Face ID iPhones have ratio >= 2.16 (19.5:9 aspect ratio)
-    // Touch ID iPhones have ratio around 1.77 (16:9 aspect ratio)
-    if (ratio >= 2.0) {
-        return true;
-    }
-    
-    // Also check if device has notch by checking for safe area insets
-    const hasSafeAreaInset = getComputedStyle(document.documentElement)
-        .getPropertyValue('--sat')?.trim() !== '' ||
-        parseInt(getComputedStyle(document.documentElement).getPropertyValue('env(safe-area-inset-top)')) > 20;
-    
-    return hasSafeAreaInset;
 }
 
 // Update all biometric text elements

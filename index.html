@@ -15,6 +15,8 @@
     <!-- Login Screen -->
     <div id="lock-screen" class="screen active">
         <div class="lock-container">
+            <h1 class="app-title">Atlas Systems</h1>
+            <p class="app-subtitle">Home Security System</p>
             <div class="atlas-logo">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                     <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/>
@@ -24,8 +26,6 @@
                     <line x1="12" y1="2" x2="12" y2="8.5"/>
                 </svg>
             </div>
-            <h1 class="app-title">Atlas Systems</h1>
-            <p class="app-subtitle">Smart Home Security Management</p>
             
             <!-- ============================================
                  SIGN UP FORM (First Time Users)
@@ -163,12 +163,6 @@
                  ============================================ -->
             <div id="biometric-unlock-container" class="auth-container" style="display: none;">
                 <div class="saved-user-info">
-                    <div class="saved-avatar">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                            <circle cx="12" cy="8" r="4"/>
-                            <path d="M20 21a8 8 0 1 0-16 0"/>
-                        </svg>
-                    </div>
                     <span id="saved-user-name" class="saved-name">Welcome back</span>
                     <span id="saved-user-email" class="saved-email">user@example.com</span>
                 </div>
@@ -348,7 +342,7 @@
                         <circle cx="12" cy="12" r="10"/>
                         <polyline points="12 6 12 12 16 14"/>
                     </svg>
-                    <span>History</span>
+                    <span>Events</span>
                 </button>
             </div>
         </main>
@@ -357,7 +351,7 @@
         <div id="activity-drawer-overlay" class="drawer-overlay"></div>
         <div id="activity-drawer" class="activity-drawer">
             <div class="drawer-header">
-                <h2>Recent Activity</h2>
+                <h2>Events</h2>
                 <button id="close-drawer-btn" class="icon-button" title="Close">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="18" y1="6" x2="6" y2="18"/>
@@ -379,7 +373,7 @@
                             <polyline points="12 6 12 12 16 14"/>
                         </svg>
                     </div>
-                    <p>No recent activity</p>
+                    <p>No events yet</p>
                     <span>Your security events will appear here</span>
                 </div>
             </div>
@@ -450,13 +444,6 @@
             </button>
         </div>
         <div class="panel-content">
-            <div class="profile-avatar">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                    <circle cx="12" cy="8" r="4"/>
-                    <path d="M20 21a8 8 0 1 0-16 0"/>
-                </svg>
-            </div>
-            
             <form id="profile-form" class="profile-form">
                 <div class="form-group">
                     <label for="user-name">Full Name</label>

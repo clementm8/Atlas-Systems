@@ -1,6 +1,3 @@
-Apple Developer account
-
-
 Customer profile:
 
 - Atlas Systems, home surveilance company
@@ -8,7 +5,67 @@ Customer profile:
 Website:
 - https://atlas-systems.vercel.app/
 
+Project Description:
+A native IOS app built using Median.co for Atlas Systems to allow users access and monitor their home security system securely.
+
+
 Project Requirements:
+- IOS native
 - Push notifications: Live updates on events such as motion detected at home, alarm activated, and software update required
 - Biometric Authentication: Using FaceId to login to the app
 - DataStore: Store user profile information and activity log locally
+
+
+Technical Implementation:
+- Uses Median Bridge via the Median Js library to access median.* methods for plugin functionality. 
+- The bridge is an API that the WebApp/Website uses to control the native app. 
+- Alternatively we could use the median protocol to access the bridge but it doesnt fit our usecase and its not the recommended approach:
+The median protocol is good for simple one way communication on the bridge, not back and forth where responses are needed
+
+
+┌─────────────────────────────────────────────────────────────┐
+│                     YOUR WEB APP                            │
+│                                                             │
+│   ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    │
+│   │  Sign Up    │    │  Dashboard  │    │  Profile    │    │
+│   └──────┬──────┘    └──────┬──────┘    └──────┬──────┘    │
+│          │                  │                  │            │
+│          ▼                  ▼                  ▼            │
+│   ┌─────────────────────────────────────────────────────┐  │
+│   │              JavaScript Bridge (median.*)            │  │
+│   └──────────────────────┬──────────────────────────────┘  │
+└──────────────────────────┼──────────────────────────────────┘
+                           │
+           ┌───────────────┼───────────────┐
+           ▼               ▼               ▼
+    ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
+    │ median.auth │ │  median.    │ │  median.    │
+    │ (Biometrics)│ │  datastore  │ │  onesignal  │
+    └──────┬──────┘ └──────┬──────┘ └──────┬──────┘
+           │               │               │
+           ▼               ▼               ▼
+    ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
+    │iOS Keychain │ │Native Device│ │   APNs /    │
+    │  / Android  │ │   Storage   │ │  OneSignal  │
+    │  Keystore   │ │             │ │   Server    │
+    └─────────────┘ └─────────────┘ └─────────────┘
+
+
+
+
+Issues I ran into:
+
+Apple Developer account required for push notification plugin, relies on APN's (Apple Push Notification service) an needs APN key
+
+How it works:
+
+Your app's server sends a notification to Apple's APN servers
+APN routes the notification to the correct user's device
+The device displays the notification to the user
+
+
+
+'Median is not defined' error I see in my web console?
+This error occurs because the JavaScript Bridge Library is either not injected into your webpage or has not been initialized. The mobile app injects the library into your webpage DOM at runtime, meaning it is not accessible through a desktop browser.
+
+If you would like to avoid the injection, Median offers an NPM Package to simplify usage within web frameworks such as React. When using the NPM Package you are not dependant on the app to inject the library and should toggle the option to prevent the injection on the Website Overrides tab within the App Studio.
