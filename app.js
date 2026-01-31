@@ -1007,6 +1007,11 @@ async function deleteActivity() {
 // ============================================
 
 function openProfilePanel() {
+    // Populate form with current profile data
+    DOM.userName.value = AppState.userProfile.name || AppState.savedAccount.name || '';
+    DOM.userEmail.value = AppState.userProfile.email || AppState.savedAccount.email || '';
+    DOM.userAddress.value = AppState.userProfile.address || '';
+    
     DOM.profilePanel.classList.add('active');
 }
 
