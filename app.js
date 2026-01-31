@@ -5,6 +5,11 @@
  * - Biometric Authentication (Face ID / Touch ID) - Save & retrieve login credentials
  * - DataStore (User profile & activity storage)
  * - Push Notifications (Security alerts via OneSignal)
+ * 
+ * Auth Flow:
+ * 1. First time user → Sign Up form → Create account → Save with biometrics
+ * 2. Returning user (no biometrics) → Sign In form
+ * 3. Returning user (with biometrics) → Biometric unlock screen
  */
 
 // ============================================
@@ -15,13 +20,21 @@ const AppState = {
     isMedianApp: false,
     isAuthenticated: false,
     
-    // Biometrics
+    // Account status
+    hasAccount: false,      // Has created an account (stored locally)
+    hasBiometrics: false,   // Has biometric credentials saved
+    
+    // Biometrics info
     biometricAvailable: false,
     biometricType: 'biometrics', // 'faceId' or 'touchId' or 'biometrics'
-    hasSavedCredentials: false,
-    savedEmail: '',
     
-    // User profile
+    // Saved account info (from localStorage)
+    savedAccount: {
+        name: '',
+        email: ''
+    },
+    
+    // User profile (from DataStore)
     userProfile: {
         name: '',
         email: '',
@@ -53,32 +66,46 @@ const DOM = {
     lockScreen: document.getElementById('lock-screen'),
     vaultScreen: document.getElementById('vault-screen'),
     
-    // Login Form
-    loginFormContainer: document.getElementById('login-form-container'),
+    // Auth Containers
+    signupContainer: document.getElementById('signup-container'),
+    signinContainer: document.getElementById('signin-container'),
+    biometricUnlockContainer: document.getElementById('biometric-unlock-container'),
+    browserFallback: document.getElementById('browser-fallback'),
+    
+    // Sign Up Form
+    signupForm: document.getElementById('signup-form'),
+    signupName: document.getElementById('signup-name'),
+    signupEmail: document.getElementById('signup-email'),
+    signupPassword: document.getElementById('signup-password'),
+    signupConfirm: document.getElementById('signup-confirm'),
+    signupBiometricOption: document.getElementById('signup-biometric-option'),
+    signupEnableBiometric: document.getElementById('signup-enable-biometric'),
+    signupBiometricText: document.getElementById('signup-biometric-text'),
+    signupSubmitBtn: document.getElementById('signup-submit-btn'),
+    signupStatus: document.getElementById('signup-status'),
+    toggleSignupPassword: document.getElementById('toggle-signup-password'),
+    switchToSignin: document.getElementById('switch-to-signin'),
+    
+    // Sign In Form
     loginForm: document.getElementById('login-form'),
     loginEmail: document.getElementById('login-email'),
     loginPassword: document.getElementById('login-password'),
     loginSubmitBtn: document.getElementById('login-submit-btn'),
     loginStatus: document.getElementById('login-status'),
     togglePassword: document.getElementById('toggle-password'),
-    eyeIcon: document.getElementById('eye-icon'),
-    eyeOffIcon: document.getElementById('eye-off-icon'),
-    
-    // Biometric Option
     biometricOption: document.getElementById('biometric-option'),
     rememberBiometric: document.getElementById('remember-biometric'),
     biometricTypeText: document.getElementById('biometric-type-text'),
+    switchToSignup: document.getElementById('switch-to-signup'),
     
     // Biometric Unlock
-    biometricUnlockContainer: document.getElementById('biometric-unlock-container'),
+    savedUserName: document.getElementById('saved-user-name'),
     savedUserEmail: document.getElementById('saved-user-email'),
     unlockBtn: document.getElementById('unlock-btn'),
     unlockText: document.getElementById('unlock-text'),
     biometricStatus: document.getElementById('biometric-status'),
     usePasswordBtn: document.getElementById('use-password-btn'),
-    
-    // Browser Fallback
-    browserFallback: document.getElementById('browser-fallback'),
+    useDifferentAccount: document.getElementById('use-different-account'),
     
     // Dashboard
     userGreeting: document.getElementById('user-greeting'),
@@ -172,7 +199,6 @@ function showToast(message, type = 'success') {
     toast.className = `toast ${type}`;
     toast.innerHTML = `<p>${message}</p>`;
     DOM.toastContainer.appendChild(toast);
-    
     setTimeout(() => toast.remove(), 3000);
 }
 
@@ -208,69 +234,56 @@ function escapeHtml(text) {
 // ============================================
 
 function showScreen(screenId) {
-    document.querySelectorAll('.screen').forEach(screen => {
-        screen.classList.remove('active');
-    });
-    
-    const targetScreen = document.getElementById(screenId);
-    if (targetScreen) {
-        targetScreen.classList.add('active');
-    }
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(screenId)?.classList.add('active');
 }
 
-function lockApp() {
-    AppState.isAuthenticated = false;
-    showScreen('lock-screen');
-    
-    // Show appropriate login UI based on saved credentials
-    if (AppState.hasSavedCredentials && AppState.biometricAvailable) {
-        showBiometricUnlock();
-    } else {
-        showLoginForm();
-    }
-}
-
-function unlockApp(email) {
-    AppState.isAuthenticated = true;
-    AppState.savedEmail = email || AppState.savedEmail;
-    showScreen('vault-screen');
-    loadUserData();
-    loadActivities();
-    updateGreeting();
-}
-
-function updateGreeting() {
-    const name = AppState.userProfile.name;
-    if (name) {
-        DOM.userGreeting.textContent = `Welcome back, ${name.split(' ')[0]}`;
-    } else if (AppState.savedEmail) {
-        DOM.userGreeting.textContent = `Welcome, ${AppState.savedEmail.split('@')[0]}`;
-    } else {
-        DOM.userGreeting.textContent = 'Welcome back';
-    }
-}
-
-// ============================================
-// Login UI Management
-// ============================================
-
-function showLoginForm() {
-    DOM.loginFormContainer.style.display = 'block';
+function hideAllAuthContainers() {
+    DOM.signupContainer.style.display = 'none';
+    DOM.signinContainer.style.display = 'none';
     DOM.biometricUnlockContainer.style.display = 'none';
+}
+
+function showSignup() {
+    hideAllAuthContainers();
+    DOM.signupContainer.style.display = 'block';
+    
+    // Show biometric option if available
+    if (AppState.biometricAvailable) {
+        DOM.signupBiometricOption.style.display = 'block';
+        updateBiometricText(DOM.signupBiometricText, 'Enable');
+    }
+}
+
+function showSignin() {
+    hideAllAuthContainers();
+    DOM.signinContainer.style.display = 'block';
+    
+    // Pre-fill email if we have it
+    if (AppState.savedAccount.email) {
+        DOM.loginEmail.value = AppState.savedAccount.email;
+    }
     
     // Show biometric option if available
     if (AppState.biometricAvailable) {
         DOM.biometricOption.style.display = 'block';
-        updateBiometricTypeText();
+        updateBiometricText(DOM.biometricTypeText, 'Remember with');
     }
 }
 
 function showBiometricUnlock() {
-    DOM.loginFormContainer.style.display = 'none';
+    hideAllAuthContainers();
     DOM.biometricUnlockContainer.style.display = 'flex';
-    DOM.savedUserEmail.textContent = AppState.savedEmail || 'user@example.com';
     
-    // Update unlock text
+    // Display saved user info
+    if (AppState.savedAccount.name) {
+        DOM.savedUserName.textContent = `Welcome back, ${AppState.savedAccount.name.split(' ')[0]}`;
+    } else {
+        DOM.savedUserName.textContent = 'Welcome back';
+    }
+    DOM.savedUserEmail.textContent = AppState.savedAccount.email || 'user@example.com';
+    
+    // Update unlock button text
     if (AppState.biometricType === 'faceId') {
         DOM.unlockText.textContent = 'Unlock with Face ID';
     } else if (AppState.biometricType === 'touchId') {
@@ -280,13 +293,65 @@ function showBiometricUnlock() {
     }
 }
 
-function updateBiometricTypeText() {
+function updateBiometricText(element, prefix) {
     if (AppState.biometricType === 'faceId') {
-        DOM.biometricTypeText.textContent = 'Remember with Face ID';
+        element.textContent = `${prefix} Face ID`;
     } else if (AppState.biometricType === 'touchId') {
-        DOM.biometricTypeText.textContent = 'Remember with Touch ID';
+        element.textContent = `${prefix} Touch ID`;
     } else {
-        DOM.biometricTypeText.textContent = 'Remember with Biometrics';
+        element.textContent = `${prefix} Biometrics`;
+    }
+}
+
+function lockApp() {
+    AppState.isAuthenticated = false;
+    showScreen('lock-screen');
+    determineAuthScreen();
+}
+
+function unlockApp() {
+    AppState.isAuthenticated = true;
+    showScreen('vault-screen');
+    loadUserData();
+    loadActivities();
+    updateGreeting();
+}
+
+function updateGreeting() {
+    const name = AppState.userProfile.name || AppState.savedAccount.name;
+    if (name) {
+        DOM.userGreeting.textContent = `Welcome, ${name.split(' ')[0]}`;
+    } else if (AppState.savedAccount.email) {
+        DOM.userGreeting.textContent = `Welcome, ${AppState.savedAccount.email.split('@')[0]}`;
+    } else {
+        DOM.userGreeting.textContent = 'Welcome';
+    }
+}
+
+// ============================================
+// Determine Which Auth Screen to Show
+// ============================================
+
+function determineAuthScreen() {
+    // Check for existing account
+    const savedAccountData = localStorage.getItem('atlas_account');
+    if (savedAccountData) {
+        AppState.savedAccount = JSON.parse(savedAccountData);
+        AppState.hasAccount = true;
+    }
+    
+    // Determine which screen to show
+    if (AppState.hasBiometrics && AppState.hasAccount) {
+        // Has biometrics saved → show biometric unlock
+        showBiometricUnlock();
+        // Auto-trigger biometric after short delay
+        setTimeout(() => authenticateWithBiometrics(), 600);
+    } else if (AppState.hasAccount) {
+        // Has account but no biometrics → show sign in
+        showSignin();
+    } else {
+        // No account → show sign up
+        showSignup();
     }
 }
 
@@ -296,17 +361,15 @@ function updateBiometricTypeText() {
 
 function checkMedianEnvironment() {
     AppState.isMedianApp = typeof median !== 'undefined' && median !== null;
-    
     console.log('Running in Median:', AppState.isMedianApp);
     
     if (AppState.isMedianApp) {
         initBiometrics();
         initPushNotifications();
     } else {
-        // Browser fallback mode
+        // Browser fallback
         DOM.browserFallback.style.display = 'block';
-        DOM.biometricOption.style.display = 'none';
-        showLoginForm();
+        determineAuthScreen();
     }
 }
 
@@ -322,7 +385,7 @@ async function initBiometrics() {
         console.log('Biometric status:', status);
         
         AppState.biometricAvailable = status.hasTouchId || status.hasFaceId;
-        AppState.hasSavedCredentials = status.hasSecret;
+        AppState.hasBiometrics = status.hasSecret;
         
         // Determine biometric type
         if (status.hasFaceId) {
@@ -331,39 +394,18 @@ async function initBiometrics() {
             AppState.biometricType = 'touchId';
         }
         
-        if (AppState.biometricAvailable) {
-            DOM.biometricOption.style.display = 'block';
-            updateBiometricTypeText();
-        }
+        // Now determine which auth screen to show
+        determineAuthScreen();
         
-        // Check if we have saved credentials
-        if (AppState.hasSavedCredentials) {
-            // Load saved email from local storage for display
-            const savedData = localStorage.getItem('atlas_saved_email');
-            if (savedData) {
-                AppState.savedEmail = savedData;
-            }
-            
-            // Show biometric unlock screen
-            showBiometricUnlock();
-            
-            // Auto-prompt for biometric auth after a short delay
-            setTimeout(() => {
-                authenticateWithBiometrics();
-            }, 600);
-        } else {
-            // No saved credentials, show login form
-            showLoginForm();
-        }
     } catch (error) {
         console.error('Biometric init error:', error);
-        showLoginForm();
+        determineAuthScreen();
     }
 }
 
 async function authenticateWithBiometrics() {
     if (!AppState.isMedianApp || !AppState.biometricAvailable) {
-        showLoginForm();
+        showSignin();
         return;
     }
     
@@ -371,27 +413,32 @@ async function authenticateWithBiometrics() {
     DOM.biometricStatus.className = 'status-text';
     
     try {
-        // Retrieve saved credentials with biometric verification
         const result = await median.auth.get();
         
         if (result.success && result.secret) {
             console.log('Biometric auth successful');
             
-            // Parse the saved credentials
+            // Parse saved credentials
             const credentials = JSON.parse(result.secret);
+            
+            // Update saved account info
+            AppState.savedAccount.email = credentials.email;
+            AppState.savedAccount.name = credentials.name || '';
             
             DOM.biometricStatus.textContent = 'Authentication successful!';
             DOM.biometricStatus.className = 'status-text success';
             
             // Log security event
-            logSecurityEvent('system', 'Biometric Login', `User authenticated via ${AppState.biometricType === 'faceId' ? 'Face ID' : 'Touch ID'}`, 'Mobile Device');
+            logSecurityEvent('system', 'Biometric Login', 
+                `User authenticated via ${AppState.biometricType === 'faceId' ? 'Face ID' : 'Touch ID'}`, 
+                'Mobile Device');
             
             setTimeout(() => {
-                unlockApp(credentials.email);
+                unlockApp();
                 showToast('Welcome to Atlas Systems');
             }, 300);
         } else {
-            DOM.biometricStatus.textContent = 'Authentication failed';
+            DOM.biometricStatus.textContent = 'Authentication failed. Try again.';
             DOM.biometricStatus.className = 'status-text error';
         }
     } catch (error) {
@@ -401,55 +448,133 @@ async function authenticateWithBiometrics() {
             DOM.biometricStatus.textContent = 'Authentication cancelled';
             DOM.biometricStatus.className = 'status-text';
         } else {
-            DOM.biometricStatus.textContent = 'Authentication failed. Try again or use password.';
+            DOM.biometricStatus.textContent = 'Authentication failed. Use password instead.';
             DOM.biometricStatus.className = 'status-text error';
         }
     }
 }
 
-async function saveCredentialsWithBiometrics(email, password) {
+async function saveCredentialsWithBiometrics(name, email, password) {
     if (!AppState.isMedianApp || !AppState.biometricAvailable) {
         return false;
     }
     
     try {
-        // Save credentials encrypted with biometrics
         const credentials = JSON.stringify({
+            name: name,
             email: email,
             password: password,
             savedAt: Date.now()
         });
         
-        const result = await median.auth.save({
-            secret: credentials
-        });
+        const result = await median.auth.save({ secret: credentials });
         
         if (result.success) {
-            // Save email separately for display purposes
-            localStorage.setItem('atlas_saved_email', email);
-            AppState.hasSavedCredentials = true;
-            AppState.savedEmail = email;
-            
+            AppState.hasBiometrics = true;
             console.log('Credentials saved with biometrics');
             return true;
         }
     } catch (error) {
-        console.error('Save credentials error:', error);
+        console.error('Save biometric credentials error:', error);
     }
     
     return false;
 }
 
 // ============================================
-// Login Form Handler
+// Sign Up Handler
 // ============================================
 
-async function handleLogin(e) {
+async function handleSignup(e) {
+    e.preventDefault();
+    
+    const name = DOM.signupName.value.trim();
+    const email = DOM.signupEmail.value.trim();
+    const password = DOM.signupPassword.value;
+    const confirmPassword = DOM.signupConfirm.value;
+    const enableBiometric = DOM.signupEnableBiometric?.checked ?? false;
+    
+    // Validation
+    if (!name || !email || !password) {
+        DOM.signupStatus.textContent = 'Please fill in all fields';
+        DOM.signupStatus.className = 'status-text error';
+        return;
+    }
+    
+    if (password !== confirmPassword) {
+        DOM.signupStatus.textContent = 'Passwords do not match';
+        DOM.signupStatus.className = 'status-text error';
+        return;
+    }
+    
+    if (password.length < 6) {
+        DOM.signupStatus.textContent = 'Password must be at least 6 characters';
+        DOM.signupStatus.className = 'status-text error';
+        return;
+    }
+    
+    // Show loading
+    DOM.signupSubmitBtn.disabled = true;
+    DOM.signupSubmitBtn.innerHTML = `
+        <svg class="spinner" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
+        Creating Account...
+    `;
+    DOM.signupStatus.textContent = '';
+    
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    // Save account locally
+    const accountData = { name, email, createdAt: Date.now() };
+    localStorage.setItem('atlas_account', JSON.stringify(accountData));
+    AppState.savedAccount = accountData;
+    AppState.hasAccount = true;
+    
+    // Save credentials with biometrics if enabled
+    if (enableBiometric && AppState.biometricAvailable && AppState.isMedianApp) {
+        const saved = await saveCredentialsWithBiometrics(name, email, password);
+        if (saved) {
+            showToast(`Account secured with ${AppState.biometricType === 'faceId' ? 'Face ID' : 'Touch ID'}`);
+        }
+    }
+    
+    // Save initial profile
+    AppState.userProfile = { name, email, phone: '', address: '', emergencyContact: '' };
+    await saveUserProfileToStore();
+    
+    // Log security event
+    logSecurityEvent('system', 'Account Created', 'New Atlas Systems account registered', 'Mobile Device');
+    
+    // Clear form
+    DOM.signupForm.reset();
+    
+    // Reset button
+    DOM.signupSubmitBtn.disabled = false;
+    DOM.signupSubmitBtn.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="8.5" cy="7" r="4"/>
+            <line x1="20" y1="8" x2="20" y2="14"/>
+            <line x1="23" y1="11" x2="17" y2="11"/>
+        </svg>
+        Create Account
+    `;
+    
+    // Unlock app
+    unlockApp();
+    showToast('Welcome to Atlas Systems!');
+}
+
+// ============================================
+// Sign In Handler
+// ============================================
+
+async function handleSignin(e) {
     e.preventDefault();
     
     const email = DOM.loginEmail.value.trim();
     const password = DOM.loginPassword.value;
-    const rememberWithBiometric = DOM.rememberBiometric.checked;
+    const rememberWithBiometric = DOM.rememberBiometric?.checked ?? false;
     
     if (!email || !password) {
         DOM.loginStatus.textContent = 'Please enter email and password';
@@ -457,26 +582,31 @@ async function handleLogin(e) {
         return;
     }
     
-    // Show loading state
+    // Show loading
     DOM.loginSubmitBtn.disabled = true;
     DOM.loginSubmitBtn.innerHTML = `
-        <svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10" stroke-dasharray="60" stroke-dashoffset="20"/>
-        </svg>
+        <svg class="spinner" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
         Signing in...
     `;
     DOM.loginStatus.textContent = '';
     
-    // Simulate authentication (in production, this would hit your API)
+    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 800));
     
-    // Demo mode: Accept any valid-looking credentials
+    // Demo mode: accept any valid-looking credentials
     if (email.includes('@') && password.length >= 1) {
-        // Save credentials with biometrics if option is checked
+        // Update saved account
+        if (!AppState.savedAccount.name) {
+            AppState.savedAccount.name = email.split('@')[0];
+        }
+        AppState.savedAccount.email = email;
+        localStorage.setItem('atlas_account', JSON.stringify(AppState.savedAccount));
+        
+        // Save with biometrics if enabled
         if (rememberWithBiometric && AppState.biometricAvailable && AppState.isMedianApp) {
-            const saved = await saveCredentialsWithBiometrics(email, password);
+            const saved = await saveCredentialsWithBiometrics(AppState.savedAccount.name, email, password);
             if (saved) {
-                showToast(`Credentials saved with ${AppState.biometricType === 'faceId' ? 'Face ID' : 'Touch ID'}`);
+                showToast(`Login saved with ${AppState.biometricType === 'faceId' ? 'Face ID' : 'Touch ID'}`);
             }
         }
         
@@ -486,9 +616,9 @@ async function handleLogin(e) {
         // Clear form
         DOM.loginForm.reset();
         
-        // Unlock app
-        unlockApp(email);
-        showToast('Welcome to Atlas Systems');
+        // Unlock
+        unlockApp();
+        showToast('Welcome back!');
     } else {
         DOM.loginStatus.textContent = 'Invalid email or password';
         DOM.loginStatus.className = 'status-text error';
@@ -506,17 +636,25 @@ async function handleLogin(e) {
     `;
 }
 
-function togglePasswordVisibility() {
-    const isPassword = DOM.loginPassword.type === 'password';
-    DOM.loginPassword.type = isPassword ? 'text' : 'password';
-    DOM.eyeIcon.style.display = isPassword ? 'none' : 'block';
-    DOM.eyeOffIcon.style.display = isPassword ? 'block' : 'none';
-}
+// ============================================
+// Password Visibility Toggle
+// ============================================
 
-function switchToPasswordLogin() {
-    showLoginForm();
-    DOM.loginEmail.value = AppState.savedEmail || '';
-    DOM.loginEmail.focus();
+function setupPasswordToggle(button, passwordInput) {
+    if (!button || !passwordInput) return;
+    
+    button.addEventListener('click', () => {
+        const isPassword = passwordInput.type === 'password';
+        passwordInput.type = isPassword ? 'text' : 'password';
+        
+        const eyeIcon = button.querySelector('.eye-icon');
+        const eyeOffIcon = button.querySelector('.eye-off-icon');
+        
+        if (eyeIcon && eyeOffIcon) {
+            eyeIcon.style.display = isPassword ? 'none' : 'block';
+            eyeOffIcon.style.display = isPassword ? 'block' : 'none';
+        }
+    });
 }
 
 // ============================================
@@ -537,15 +675,30 @@ async function loadUserData() {
             }
         }
         
-        // Update form fields
-        DOM.userName.value = AppState.userProfile.name || '';
-        DOM.userEmail.value = AppState.userProfile.email || AppState.savedEmail || '';
+        // Populate profile form
+        DOM.userName.value = AppState.userProfile.name || AppState.savedAccount.name || '';
+        DOM.userEmail.value = AppState.userProfile.email || AppState.savedAccount.email || '';
         DOM.userPhone.value = AppState.userProfile.phone || '';
         DOM.userAddress.value = AppState.userProfile.address || '';
         DOM.emergencyContact.value = AppState.userProfile.emergencyContact || '';
         
     } catch (error) {
         console.error('Load user data error:', error);
+    }
+}
+
+async function saveUserProfileToStore() {
+    try {
+        const profileJson = JSON.stringify(AppState.userProfile);
+        
+        if (AppState.isMedianApp) {
+            await median.datastore.set({ key: 'atlas_user_profile', value: profileJson });
+        }
+        
+        localStorage.setItem('atlas_user_profile', profileJson);
+    } catch (error) {
+        console.error('Save profile error:', error);
+        localStorage.setItem('atlas_user_profile', JSON.stringify(AppState.userProfile));
     }
 }
 
@@ -560,27 +713,10 @@ async function saveUserProfile(e) {
         emergencyContact: DOM.emergencyContact.value.trim()
     };
     
-    try {
-        const profileJson = JSON.stringify(AppState.userProfile);
-        
-        if (AppState.isMedianApp) {
-            await median.datastore.set({
-                key: 'atlas_user_profile',
-                value: profileJson
-            });
-        }
-        
-        localStorage.setItem('atlas_user_profile', profileJson);
-        
-        updateGreeting();
-        closeProfilePanel();
-        showToast('Profile saved successfully');
-        
-    } catch (error) {
-        console.error('Save profile error:', error);
-        localStorage.setItem('atlas_user_profile', JSON.stringify(AppState.userProfile));
-        showToast('Profile saved locally');
-    }
+    await saveUserProfileToStore();
+    updateGreeting();
+    closeProfilePanel();
+    showToast('Profile saved successfully');
 }
 
 async function loadActivities() {
@@ -597,7 +733,6 @@ async function loadActivities() {
             AppState.activities = stored ? JSON.parse(stored) : [];
         }
         
-        // Add demo data if empty
         if (AppState.activities.length === 0) {
             addDemoActivities();
         }
@@ -650,14 +785,10 @@ async function saveActivities() {
         const activitiesJson = JSON.stringify(AppState.activities);
         
         if (AppState.isMedianApp) {
-            await median.datastore.set({
-                key: 'atlas_activities',
-                value: activitiesJson
-            });
+            await median.datastore.set({ key: 'atlas_activities', value: activitiesJson });
         }
         
         localStorage.setItem('atlas_activities', activitiesJson);
-        
     } catch (error) {
         console.error('Save activities error:', error);
         localStorage.setItem('atlas_activities', JSON.stringify(AppState.activities));
@@ -714,9 +845,7 @@ function renderActivities() {
     `).join('');
     
     DOM.activityList.querySelectorAll('.activity-card').forEach(card => {
-        card.addEventListener('click', () => {
-            openEditActivityModal(card.dataset.id);
-        });
+        card.addEventListener('click', () => openEditActivityModal(card.dataset.id));
     });
 }
 
@@ -776,27 +905,11 @@ async function saveActivity(e) {
     if (AppState.editingActivityId) {
         const index = AppState.activities.findIndex(a => a.id === AppState.editingActivityId);
         if (index !== -1) {
-            AppState.activities[index] = {
-                ...AppState.activities[index],
-                type,
-                title,
-                content,
-                location,
-                updatedAt: now
-            };
+            AppState.activities[index] = { ...AppState.activities[index], type, title, content, location, updatedAt: now };
         }
         showToast('Event updated');
     } else {
-        const newActivity = {
-            id: generateId(),
-            type,
-            title,
-            content,
-            location,
-            createdAt: now,
-            updatedAt: now
-        };
-        AppState.activities.unshift(newActivity);
+        AppState.activities.unshift({ id: generateId(), type, title, content, location, createdAt: now, updatedAt: now });
         showToast('Event logged');
     }
     
@@ -807,11 +920,9 @@ async function saveActivity(e) {
 
 async function deleteActivity() {
     if (!AppState.editingActivityId) return;
-    
     if (!confirm('Delete this security event?')) return;
     
     AppState.activities = AppState.activities.filter(a => a.id !== AppState.editingActivityId);
-    
     await saveActivities();
     renderActivities();
     closeActivityModal();
@@ -831,7 +942,7 @@ function closeProfilePanel() {
 }
 
 // ============================================
-// Push Notifications (OneSignal)
+// Push Notifications
 // ============================================
 
 async function initPushNotifications() {
@@ -847,7 +958,6 @@ async function initPushNotifications() {
         if (info && info.oneSignalUserId) {
             AppState.pushRegistered = true;
             AppState.playerId = info.oneSignalUserId;
-            
             DOM.pushPermission.textContent = 'Enabled';
             DOM.pushPermission.className = 'status-value granted';
             DOM.playerId.textContent = info.oneSignalUserId;
@@ -860,7 +970,6 @@ async function initPushNotifications() {
         }
         
         setupNotificationHandler();
-        
     } catch (error) {
         console.error('Push init error:', error);
         DOM.pushPermission.textContent = 'Error';
@@ -886,34 +995,23 @@ async function registerPushNotifications() {
             if (info && info.oneSignalUserId) {
                 AppState.pushRegistered = true;
                 AppState.playerId = info.oneSignalUserId;
-                
                 DOM.pushPermission.textContent = 'Enabled';
                 DOM.pushPermission.className = 'status-value granted';
                 DOM.playerId.textContent = info.oneSignalUserId;
                 DOM.registerPushBtn.textContent = 'Alerts Enabled';
                 DOM.notificationBadge.classList.remove('hidden');
-                
                 logSecurityEvent('system', 'Push Alerts Enabled', 'Device registered for security notifications', 'Mobile Device');
                 showToast('Security alerts enabled!');
             } else {
                 DOM.registerPushBtn.textContent = 'Enable Security Alerts';
                 DOM.registerPushBtn.disabled = false;
-                showToast('Registration pending...', 'error');
             }
         }, 1500);
-        
     } catch (error) {
         console.error('Push registration error:', error);
         DOM.registerPushBtn.textContent = 'Enable Security Alerts';
         DOM.registerPushBtn.disabled = false;
-        
-        if (error.message && error.message.includes('denied')) {
-            DOM.pushPermission.textContent = 'Denied';
-            DOM.pushPermission.className = 'status-value denied';
-            showToast('Alert permission denied', 'error');
-        } else {
-            showToast('Failed to enable alerts', 'error');
-        }
+        showToast('Failed to enable alerts', 'error');
     }
 }
 
@@ -923,14 +1021,7 @@ function setupNotificationHandler() {
     try {
         median.onesignal.receive = function(data) {
             console.log('Security alert received:', data);
-            
-            logSecurityEvent(
-                'motion',
-                data.title || 'Security Alert',
-                data.body || 'Alert received from Atlas Systems',
-                'Push Notification'
-            );
-            
+            logSecurityEvent('motion', data.title || 'Security Alert', data.body || 'Alert received', 'Push Notification');
             showToast(`🚨 ${data.title || 'Security Alert'}`);
         };
     } catch (error) {
@@ -956,29 +1047,32 @@ function closeNotificationsPanel() {
 
 function toggleSystemArm() {
     AppState.systemArmed = !AppState.systemArmed;
-    
     const status = AppState.systemArmed ? 'Armed' : 'Disarmed';
     DOM.systemStatus.textContent = status;
     DOM.systemStatus.className = `system-status ${AppState.systemArmed ? 'armed' : 'disarmed'}`;
-    
     DOM.armBtn.querySelector('span').textContent = AppState.systemArmed ? 'Disarm' : 'Arm System';
-    
-    logSecurityEvent(
-        'system',
-        `System ${status}`,
-        `Security system ${AppState.systemArmed ? 'activated' : 'deactivated'} manually`,
-        'Control Panel'
-    );
-    
+    logSecurityEvent('system', `System ${status}`, `Security system ${AppState.systemArmed ? 'activated' : 'deactivated'} manually`, 'Control Panel');
     showToast(`System ${status.toLowerCase()}`);
 }
 
-function showCamerasDemo() {
-    showToast('Camera view coming soon');
-}
+// ============================================
+// Clear Account (for testing)
+// ============================================
 
-function showHistoryDemo() {
-    showToast('Full history coming soon');
+function clearAccountAndLogout() {
+    // Clear all stored data
+    localStorage.removeItem('atlas_account');
+    localStorage.removeItem('atlas_user_profile');
+    localStorage.removeItem('atlas_activities');
+    
+    // Reset state
+    AppState.hasAccount = false;
+    AppState.hasBiometrics = false;
+    AppState.savedAccount = { name: '', email: '' };
+    
+    // Show signup
+    showSignup();
+    showToast('Account cleared');
 }
 
 // ============================================
@@ -986,70 +1080,69 @@ function showHistoryDemo() {
 // ============================================
 
 function initEventListeners() {
-    // Login Form
-    DOM.loginForm.addEventListener('submit', handleLogin);
-    DOM.togglePassword.addEventListener('click', togglePasswordVisibility);
-    DOM.usePasswordBtn.addEventListener('click', switchToPasswordLogin);
-    DOM.unlockBtn.addEventListener('click', authenticateWithBiometrics);
+    // Sign Up
+    DOM.signupForm?.addEventListener('submit', handleSignup);
+    DOM.switchToSignin?.addEventListener('click', showSignin);
+    setupPasswordToggle(DOM.toggleSignupPassword, DOM.signupPassword);
+    
+    // Sign In
+    DOM.loginForm?.addEventListener('submit', handleSignin);
+    DOM.switchToSignup?.addEventListener('click', showSignup);
+    setupPasswordToggle(DOM.togglePassword, DOM.loginPassword);
+    
+    // Biometric Unlock
+    DOM.unlockBtn?.addEventListener('click', authenticateWithBiometrics);
+    DOM.usePasswordBtn?.addEventListener('click', showSignin);
+    DOM.useDifferentAccount?.addEventListener('click', clearAccountAndLogout);
     
     // Dashboard
-    DOM.lockBtn.addEventListener('click', lockApp);
-    DOM.addNoteBtn.addEventListener('click', openAddActivityModal);
-    DOM.notificationsBtn.addEventListener('click', openNotificationsPanel);
-    DOM.profileBtn.addEventListener('click', openProfilePanel);
+    DOM.lockBtn?.addEventListener('click', lockApp);
+    DOM.addNoteBtn?.addEventListener('click', openAddActivityModal);
+    DOM.notificationsBtn?.addEventListener('click', openNotificationsPanel);
+    DOM.profileBtn?.addEventListener('click', openProfilePanel);
     
     // Quick Actions
-    DOM.armBtn.addEventListener('click', toggleSystemArm);
-    DOM.camerasBtn.addEventListener('click', showCamerasDemo);
-    DOM.historyBtn.addEventListener('click', showHistoryDemo);
+    DOM.armBtn?.addEventListener('click', toggleSystemArm);
+    DOM.camerasBtn?.addEventListener('click', () => showToast('Camera view coming soon'));
+    DOM.historyBtn?.addEventListener('click', () => showToast('Full history coming soon'));
     
     // Activity Modal
-    DOM.closeModalBtn.addEventListener('click', closeActivityModal);
-    DOM.noteForm.addEventListener('submit', saveActivity);
-    DOM.deleteNoteBtn.addEventListener('click', deleteActivity);
+    DOM.closeModalBtn?.addEventListener('click', closeActivityModal);
+    DOM.noteForm?.addEventListener('submit', saveActivity);
+    DOM.deleteNoteBtn?.addEventListener('click', deleteActivity);
     
     // Profile Panel
-    DOM.closeProfileBtn.addEventListener('click', closeProfilePanel);
-    DOM.profileForm.addEventListener('submit', saveUserProfile);
+    DOM.closeProfileBtn?.addEventListener('click', closeProfilePanel);
+    DOM.profileForm?.addEventListener('submit', saveUserProfile);
     
     // Notifications Panel
-    DOM.closePanelBtn.addEventListener('click', closeNotificationsPanel);
-    DOM.registerPushBtn.addEventListener('click', registerPushNotifications);
+    DOM.closePanelBtn?.addEventListener('click', closeNotificationsPanel);
+    DOM.registerPushBtn?.addEventListener('click', registerPushNotifications);
     
-    // Close on backdrop click
-    DOM.noteModal.addEventListener('click', (e) => {
-        if (e.target === DOM.noteModal) closeActivityModal();
-    });
+    // Close on backdrop
+    DOM.noteModal?.addEventListener('click', (e) => { if (e.target === DOM.noteModal) closeActivityModal(); });
+    DOM.notificationsPanel?.addEventListener('click', (e) => { if (e.target === DOM.notificationsPanel) closeNotificationsPanel(); });
+    DOM.profilePanel?.addEventListener('click', (e) => { if (e.target === DOM.profilePanel) closeProfilePanel(); });
     
-    DOM.notificationsPanel.addEventListener('click', (e) => {
-        if (e.target === DOM.notificationsPanel) closeNotificationsPanel();
-    });
-    
-    DOM.profilePanel.addEventListener('click', (e) => {
-        if (e.target === DOM.profilePanel) closeProfilePanel();
-    });
-    
-    // Keyboard
+    // Escape key
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
-            if (DOM.noteModal.classList.contains('active')) closeActivityModal();
-            if (DOM.notificationsPanel.classList.contains('active')) closeNotificationsPanel();
-            if (DOM.profilePanel.classList.contains('active')) closeProfilePanel();
+            if (DOM.noteModal?.classList.contains('active')) closeActivityModal();
+            if (DOM.notificationsPanel?.classList.contains('active')) closeNotificationsPanel();
+            if (DOM.profilePanel?.classList.contains('active')) closeProfilePanel();
         }
     });
 }
 
 // ============================================
-// App Initialization
+// Initialize
 // ============================================
 
 function init() {
     console.log('Atlas Systems initializing...');
-    
     initEventListeners();
     checkMedianEnvironment();
     showScreen('lock-screen');
-    
     console.log('Atlas Systems ready');
 }
 

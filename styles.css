@@ -285,24 +285,53 @@ body {
 }
 
 /* ============================================
-   Login Form
+   Auth Forms (Sign Up, Sign In, Biometric)
    ============================================ */
 
-.login-form-container {
+.auth-container {
     text-align: left;
+    animation: fadeSlideUp 0.3s ease;
 }
 
-.login-form {
+@keyframes fadeSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.auth-header {
+    text-align: center;
+    margin-bottom: var(--spacing-lg);
+}
+
+.auth-header h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-xs);
+}
+
+.auth-header p {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.auth-form {
     display: flex;
     flex-direction: column;
     gap: var(--spacing-md);
 }
 
-.login-form .form-group {
+.auth-form .form-group {
     margin-bottom: 0;
 }
 
-.login-form .form-group label {
+.auth-form .form-group label {
     display: block;
     font-size: 0.8rem;
     font-weight: 500;
@@ -311,7 +340,7 @@ body {
     text-align: left;
 }
 
-.login-form .form-group input {
+.auth-form .form-group input {
     width: 100%;
     padding: var(--spacing-md);
     background: var(--bg-tertiary);
@@ -323,14 +352,53 @@ body {
     transition: all var(--transition-fast);
 }
 
-.login-form .form-group input:focus {
+.auth-form .form-group input:focus {
     outline: none;
     border-color: var(--accent-primary);
     box-shadow: 0 0 0 3px var(--accent-glow);
 }
 
-.login-form .form-group input::placeholder {
+.auth-form .form-group input::placeholder {
     color: var(--text-muted);
+}
+
+/* Auth Switch Links */
+.auth-switch {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-lg);
+    padding-top: var(--spacing-lg);
+    border-top: 1px solid var(--border-color);
+}
+
+.auth-switch span {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+/* Biometric Actions */
+.biometric-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-sm);
+}
+
+.biometric-actions .separator {
+    color: var(--text-muted);
+    font-size: 0.7rem;
+}
+
+/* Saved User Info */
+.saved-name {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    display: block;
+    margin-bottom: 2px;
 }
 
 /* Password Input with Toggle */
