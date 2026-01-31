@@ -1,0 +1,14 @@
+Apple Developer account
+
+
+Customer profile:
+
+- Atlas Systems, home surveilance company
+
+Website:
+- https://atlas-systems.vercel.app/
+
+Project Requirements:
+- Push notifications: Live updates on events such as motion detected at home, alarm activated, and software update required
+- Biometric Authentication: Using FaceId to login to the app
+- DataStore: Store user profile information and activity log locally

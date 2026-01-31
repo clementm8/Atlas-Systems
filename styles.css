@@ -125,13 +125,17 @@ body {
     justify-content: center;
     align-items: center;
     padding: var(--spacing-lg);
+    padding-top: var(--spacing-xl);
+    padding-bottom: 80px;
     position: relative;
+    overflow-y: auto;
 }
 
 .lock-container {
     text-align: center;
     max-width: 340px;
     width: 100%;
+    margin: 0 auto;
     animation: slideUp 0.6s ease;
 }
 
@@ -227,6 +231,7 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     gap: var(--spacing-md);
     padding: var(--spacing-xl);
     background: var(--bg-card);
@@ -235,6 +240,7 @@ body {
     cursor: pointer;
     transition: all var(--transition-normal);
     width: 100%;
+    text-align: center;
 }
 
 .unlock-button:hover {
@@ -252,6 +258,10 @@ body {
     height: 56px;
     color: var(--accent-primary);
     transition: all var(--transition-normal);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .unlock-button:hover .fingerprint-icon {
@@ -394,11 +404,11 @@ body {
 
 /* Saved User Info */
 .saved-name {
-    font-size: 1rem;
-    font-weight: 500;
+    font-size: 1.1rem;
+    font-weight: 600;
     color: var(--text-primary);
     display: block;
-    margin-bottom: 2px;
+    text-align: center;
 }
 
 /* Password Input with Toggle */
@@ -499,20 +509,26 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     gap: var(--spacing-md);
+    text-align: center;
+    width: 100%;
 }
 
 .saved-user-info {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: var(--spacing-sm);
-    margin-bottom: var(--spacing-sm);
+    justify-content: center;
+    gap: var(--spacing-xs);
+    margin-bottom: var(--spacing-md);
+    text-align: center;
+    width: 100%;
 }
 
 .saved-avatar {
-    width: 56px;
-    height: 56px;
+    width: 64px;
+    height: 64px;
     background: var(--bg-card);
     border: 2px solid var(--border-color);
     border-radius: var(--radius-full);
@@ -520,17 +536,20 @@ body {
     align-items: center;
     justify-content: center;
     color: var(--accent-primary);
+    margin: 0 auto var(--spacing-sm);
 }
 
 .saved-avatar svg {
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
 }
 
 .saved-email {
-    font-size: 0.9rem;
-    color: var(--text-secondary);
+    font-size: 0.85rem;
+    color: var(--text-muted);
     font-family: 'IBM Plex Mono', monospace;
+    text-align: center;
+    word-break: break-all;
 }
 
 .text-link-btn {
@@ -641,10 +660,34 @@ body {
 .primary-button svg {
     width: 18px;
     height: 18px;
+    flex-shrink: 0;
 }
 
 .primary-button.full-width {
     width: 100%;
+}
+
+/* Loading Spinner */
+.primary-button .spinner,
+.spinner {
+    width: 18px;
+    height: 18px;
+    animation: spin 1s linear infinite;
+    flex-shrink: 0;
+}
+
+.spinner circle {
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-dasharray: 40;
+    stroke-dashoffset: 10;
+    fill: none;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .secondary-button {

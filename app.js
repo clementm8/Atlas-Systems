@@ -365,7 +365,8 @@ function checkMedianEnvironment() {
     
     if (AppState.isMedianApp) {
         initBiometrics();
-        initPushNotifications();
+        // Push Notifications disabled - requires paid Apple Developer account
+        // initPushNotifications();
     } else {
         // Browser fallback
         DOM.browserFallback.style.display = 'block';
@@ -942,10 +943,17 @@ function closeProfilePanel() {
 }
 
 // ============================================
-// Push Notifications
+// Push Notifications - DISABLED
+// Requires paid Apple Developer account ($99/year)
+// Uncomment and enable OneSignal in Median App Studio when ready
 // ============================================
 
 async function initPushNotifications() {
+    // DISABLED - Push Notifications require paid Apple Developer account
+    console.log('Push Notifications disabled - requires paid Apple Developer account');
+    return;
+    
+    /* Original implementation:
     if (!AppState.isMedianApp) {
         DOM.pushPermission.textContent = 'Requires Median app';
         return;
@@ -975,70 +983,31 @@ async function initPushNotifications() {
         DOM.pushPermission.textContent = 'Error';
         DOM.pushPermission.className = 'status-value denied';
     }
+    */
 }
 
 async function registerPushNotifications() {
-    if (!AppState.isMedianApp) {
-        showToast('Security alerts require Median app', 'error');
-        return;
-    }
-    
-    DOM.registerPushBtn.textContent = 'Enabling...';
-    DOM.registerPushBtn.disabled = true;
-    
-    try {
-        await median.onesignal.register();
-        
-        setTimeout(async () => {
-            const info = await median.onesignal.info();
-            
-            if (info && info.oneSignalUserId) {
-                AppState.pushRegistered = true;
-                AppState.playerId = info.oneSignalUserId;
-                DOM.pushPermission.textContent = 'Enabled';
-                DOM.pushPermission.className = 'status-value granted';
-                DOM.playerId.textContent = info.oneSignalUserId;
-                DOM.registerPushBtn.textContent = 'Alerts Enabled';
-                DOM.notificationBadge.classList.remove('hidden');
-                logSecurityEvent('system', 'Push Alerts Enabled', 'Device registered for security notifications', 'Mobile Device');
-                showToast('Security alerts enabled!');
-            } else {
-                DOM.registerPushBtn.textContent = 'Enable Security Alerts';
-                DOM.registerPushBtn.disabled = false;
-            }
-        }, 1500);
-    } catch (error) {
-        console.error('Push registration error:', error);
-        DOM.registerPushBtn.textContent = 'Enable Security Alerts';
-        DOM.registerPushBtn.disabled = false;
-        showToast('Failed to enable alerts', 'error');
-    }
+    // DISABLED - Push Notifications require paid Apple Developer account
+    showToast('Push Notifications require Apple Developer Program', 'error');
+    return;
 }
 
 function setupNotificationHandler() {
-    if (!AppState.isMedianApp) return;
-    
-    try {
-        median.onesignal.receive = function(data) {
-            console.log('Security alert received:', data);
-            logSecurityEvent('motion', data.title || 'Security Alert', data.body || 'Alert received', 'Push Notification');
-            showToast(`🚨 ${data.title || 'Security Alert'}`);
-        };
-    } catch (error) {
-        console.error('Notification handler error:', error);
-    }
+    // DISABLED - Push Notifications require paid Apple Developer account
+    return;
 }
 
 // ============================================
-// Notifications Panel
+// Notifications Panel - DISABLED
 // ============================================
 
 function openNotificationsPanel() {
-    DOM.notificationsPanel.classList.add('active');
+    // DISABLED
+    showToast('Push Notifications disabled for this build', 'error');
 }
 
 function closeNotificationsPanel() {
-    DOM.notificationsPanel.classList.remove('active');
+    // DISABLED - panel is commented out in HTML
 }
 
 // ============================================
@@ -1098,7 +1067,7 @@ function initEventListeners() {
     // Dashboard
     DOM.lockBtn?.addEventListener('click', lockApp);
     DOM.addNoteBtn?.addEventListener('click', openAddActivityModal);
-    DOM.notificationsBtn?.addEventListener('click', openNotificationsPanel);
+    // DOM.notificationsBtn?.addEventListener('click', openNotificationsPanel); // DISABLED - Push requires paid Apple Developer
     DOM.profileBtn?.addEventListener('click', openProfilePanel);
     
     // Quick Actions
@@ -1115,20 +1084,20 @@ function initEventListeners() {
     DOM.closeProfileBtn?.addEventListener('click', closeProfilePanel);
     DOM.profileForm?.addEventListener('submit', saveUserProfile);
     
-    // Notifications Panel
-    DOM.closePanelBtn?.addEventListener('click', closeNotificationsPanel);
-    DOM.registerPushBtn?.addEventListener('click', registerPushNotifications);
+    // Notifications Panel - DISABLED (Push requires paid Apple Developer account)
+    // DOM.closePanelBtn?.addEventListener('click', closeNotificationsPanel);
+    // DOM.registerPushBtn?.addEventListener('click', registerPushNotifications);
     
     // Close on backdrop
     DOM.noteModal?.addEventListener('click', (e) => { if (e.target === DOM.noteModal) closeActivityModal(); });
-    DOM.notificationsPanel?.addEventListener('click', (e) => { if (e.target === DOM.notificationsPanel) closeNotificationsPanel(); });
+    // DOM.notificationsPanel?.addEventListener('click', (e) => { if (e.target === DOM.notificationsPanel) closeNotificationsPanel(); }); // DISABLED
     DOM.profilePanel?.addEventListener('click', (e) => { if (e.target === DOM.profilePanel) closeProfilePanel(); });
     
     // Escape key
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             if (DOM.noteModal?.classList.contains('active')) closeActivityModal();
-            if (DOM.notificationsPanel?.classList.contains('active')) closeNotificationsPanel();
+            // if (DOM.notificationsPanel?.classList.contains('active')) closeNotificationsPanel(); // DISABLED
             if (DOM.profilePanel?.classList.contains('active')) closeProfilePanel();
         }
     });
