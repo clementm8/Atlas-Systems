@@ -280,6 +280,7 @@ function showSignin() {
 function showBiometricUnlock() {
     hideAllAuthContainers();
     DOM.biometricUnlockContainer.style.display = 'flex';
+    DOM.biometricUnlockContainer.style.flexDirection = 'column';
     
     // Display saved user info - only show name, not email
     const displayName = AppState.savedAccount.name || AppState.userProfile.name;
@@ -300,14 +301,18 @@ function updateUnlockButtonIcon() {
     if (!iconContainer) return;
     
     if (AppState.biometricType === 'faceId') {
-        // Face ID icon
+        // Face ID icon - Lucide "ScanFace" style
         iconContainer.innerHTML = `
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                <path d="M9 12h.01M15 12h.01M10 16c.5.3 1.2.5 2 .5s1.5-.2 2-.5"/>
-                <path d="M2 8V6a2 2 0 0 1 2-2h2"/>
-                <path d="M22 8V6a2 2 0 0 0-2-2h-2"/>
-                <path d="M2 16v2a2 2 0 0 0 2 2h2"/>
-                <path d="M22 16v2a2 2 0 0 1-2 2h-2"/>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <!-- Scan frame corners -->
+                <path d="M3 7V5a2 2 0 0 1 2-2h2"/>
+                <path d="M17 3h2a2 2 0 0 1 2 2v2"/>
+                <path d="M21 17v2a2 2 0 0 1-2 2h-2"/>
+                <path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
+                <!-- Face features -->
+                <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
+                <path d="M9 9h.01"/>
+                <path d="M15 9h.01"/>
             </svg>
         `;
         DOM.unlockText.textContent = 'Unlock with Face ID';
