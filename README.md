@@ -22,8 +22,7 @@ Atlas Systems is a home security dashboard that showcases how web apps can lever
 - **Quick Actions** — Arm/disarm system, view cameras, access history
 
 ### User Profile (DataStore Demo)
-- Store user name, email, phone, address
-- Emergency contact information
+- Store user name, email, and address
 - Persists across app sessions via Median DataStore
 
 ### Security Alerts (Push Demo)
@@ -114,9 +113,7 @@ await median.datastore.set({
     value: JSON.stringify({
         name: 'John Doe',
         email: 'john@example.com',
-        phone: '555-0123',
-        address: '123 Main St',
-        emergencyContact: '555-0911'
+        address: '123 Main St'
     })
 });
 
@@ -169,9 +166,7 @@ This enables UI testing without a physical device.
 {
     "name": "string",
     "email": "string", 
-    "phone": "string",
-    "address": "string",
-    "emergencyContact": "string"
+    "address": "string"
 }
 ```
 

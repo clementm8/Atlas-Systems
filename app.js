@@ -38,9 +38,7 @@ const AppState = {
     userProfile: {
         name: '',
         email: '',
-        phone: '',
-        address: '',
-        emergencyContact: ''
+        address: ''
     },
     
     // Security activity log
@@ -124,6 +122,13 @@ const DOM = {
     camerasBtn: document.getElementById('cameras-btn'),
     historyBtn: document.getElementById('history-btn'),
     
+    // Activity Drawer
+    activityDrawerBtn: document.getElementById('activity-drawer-btn'),
+    activityDrawer: document.getElementById('activity-drawer'),
+    activityDrawerOverlay: document.getElementById('activity-drawer-overlay'),
+    closeDrawerBtn: document.getElementById('close-drawer-btn'),
+    activityBadge: document.getElementById('activity-badge'),
+    
     // Activity Modal
     noteModal: document.getElementById('note-modal'),
     modalTitle: document.getElementById('modal-title'),
@@ -142,9 +147,7 @@ const DOM = {
     profileForm: document.getElementById('profile-form'),
     userName: document.getElementById('user-name'),
     userEmail: document.getElementById('user-email'),
-    userPhone: document.getElementById('user-phone'),
     userAddress: document.getElementById('user-address'),
-    emergencyContact: document.getElementById('emergency-contact'),
     
     // Notifications Panel
     notificationsPanel: document.getElementById('notifications-panel'),
@@ -248,10 +251,13 @@ function showSignup() {
     hideAllAuthContainers();
     DOM.signupContainer.style.display = 'block';
     
-    // Show biometric option if available
-    if (AppState.biometricAvailable) {
+    // Show biometric option if available and in Median app
+    if (AppState.biometricAvailable && AppState.isMedianApp) {
         DOM.signupBiometricOption.style.display = 'block';
+        // Ensure correct biometric text is shown
         updateBiometricText(DOM.signupBiometricText, 'Enable');
+    } else {
+        DOM.signupBiometricOption.style.display = 'none';
     }
 }
 
@@ -388,12 +394,24 @@ async function initBiometrics() {
         AppState.biometricAvailable = status.hasTouchId || status.hasFaceId;
         AppState.hasBiometrics = status.hasSecret;
         
-        // Determine biometric type
+        // Determine biometric type - check Face ID first
+        // On iOS, use device detection as fallback since some SDKs report incorrectly
         if (status.hasFaceId) {
             AppState.biometricType = 'faceId';
         } else if (status.hasTouchId) {
-            AppState.biometricType = 'touchId';
+            // Double check - iPhones X and later have Face ID
+            // Use device detection to confirm
+            if (isFaceIdDevice()) {
+                AppState.biometricType = 'faceId';
+            } else {
+                AppState.biometricType = 'touchId';
+            }
         }
+        
+        console.log('Biometric type detected:', AppState.biometricType);
+        
+        // Update all biometric text elements after detection
+        updateAllBiometricText();
         
         // Now determine which auth screen to show
         determineAuthScreen();
@@ -401,6 +419,51 @@ async function initBiometrics() {
     } catch (error) {
         console.error('Biometric init error:', error);
         determineAuthScreen();
+    }
+}
+
+// Helper function to detect if device likely has Face ID
+function isFaceIdDevice() {
+    // Check if iOS device
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    if (!isIOS) return false;
+    
+    // Check screen dimensions - Face ID devices have notch/Dynamic Island
+    // iPhone X and later have screen ratios around 2.16 or higher
+    const screenRatio = window.screen.height / window.screen.width;
+    const reverseRatio = window.screen.width / window.screen.height;
+    const ratio = Math.max(screenRatio, reverseRatio);
+    
+    // Face ID iPhones have ratio >= 2.16 (19.5:9 aspect ratio)
+    // Touch ID iPhones have ratio around 1.77 (16:9 aspect ratio)
+    if (ratio >= 2.0) {
+        return true;
+    }
+    
+    // Also check if device has notch by checking for safe area insets
+    const hasSafeAreaInset = getComputedStyle(document.documentElement)
+        .getPropertyValue('--sat')?.trim() !== '' ||
+        parseInt(getComputedStyle(document.documentElement).getPropertyValue('env(safe-area-inset-top)')) > 20;
+    
+    return hasSafeAreaInset;
+}
+
+// Update all biometric text elements
+function updateAllBiometricText() {
+    if (DOM.signupBiometricText) {
+        updateBiometricText(DOM.signupBiometricText, 'Enable');
+    }
+    if (DOM.biometricTypeText) {
+        updateBiometricText(DOM.biometricTypeText, 'Remember with');
+    }
+    if (DOM.unlockText) {
+        if (AppState.biometricType === 'faceId') {
+            DOM.unlockText.textContent = 'Unlock with Face ID';
+        } else if (AppState.biometricType === 'touchId') {
+            DOM.unlockText.textContent = 'Unlock with Touch ID';
+        } else {
+            DOM.unlockText.textContent = 'Unlock with Biometrics';
+        }
     }
 }
 
@@ -523,7 +586,25 @@ async function handleSignup(e) {
     DOM.signupStatus.textContent = '';
     
     // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 800));
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Save credentials with biometrics FIRST if enabled
+    // This ensures the Face ID prompt happens during signup
+    if (enableBiometric && AppState.biometricAvailable && AppState.isMedianApp) {
+        // Update status to show we're setting up biometrics
+        DOM.signupSubmitBtn.innerHTML = `
+            <svg class="spinner" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
+            Setting up ${AppState.biometricType === 'faceId' ? 'Face ID' : 'Touch ID'}...
+        `;
+        
+        const saved = await saveCredentialsWithBiometrics(name, email, password);
+        if (saved) {
+            showToast(`Account secured with ${AppState.biometricType === 'faceId' ? 'Face ID' : 'Touch ID'}`);
+        } else {
+            // Biometric save failed - continue without biometrics
+            showToast('Biometric setup skipped', 'warning');
+        }
+    }
     
     // Save account locally
     const accountData = { name, email, createdAt: Date.now() };
@@ -531,16 +612,8 @@ async function handleSignup(e) {
     AppState.savedAccount = accountData;
     AppState.hasAccount = true;
     
-    // Save credentials with biometrics if enabled
-    if (enableBiometric && AppState.biometricAvailable && AppState.isMedianApp) {
-        const saved = await saveCredentialsWithBiometrics(name, email, password);
-        if (saved) {
-            showToast(`Account secured with ${AppState.biometricType === 'faceId' ? 'Face ID' : 'Touch ID'}`);
-        }
-    }
-    
     // Save initial profile
-    AppState.userProfile = { name, email, phone: '', address: '', emergencyContact: '' };
+    AppState.userProfile = { name, email, address: '' };
     await saveUserProfileToStore();
     
     // Log security event
@@ -679,9 +752,7 @@ async function loadUserData() {
         // Populate profile form
         DOM.userName.value = AppState.userProfile.name || AppState.savedAccount.name || '';
         DOM.userEmail.value = AppState.userProfile.email || AppState.savedAccount.email || '';
-        DOM.userPhone.value = AppState.userProfile.phone || '';
         DOM.userAddress.value = AppState.userProfile.address || '';
-        DOM.emergencyContact.value = AppState.userProfile.emergencyContact || '';
         
     } catch (error) {
         console.error('Load user data error:', error);
@@ -709,9 +780,7 @@ async function saveUserProfile(e) {
     AppState.userProfile = {
         name: DOM.userName.value.trim(),
         email: DOM.userEmail.value.trim(),
-        phone: DOM.userPhone.value.trim(),
-        address: DOM.userAddress.value.trim(),
-        emergencyContact: DOM.emergencyContact.value.trim()
+        address: DOM.userAddress.value.trim()
     };
     
     await saveUserProfileToStore();
@@ -818,6 +887,9 @@ function logSecurityEvent(type, title, content, location) {
 function renderActivities() {
     const count = AppState.activities.length;
     DOM.activityCount.textContent = `${count} event${count !== 1 ? 's' : ''}`;
+    
+    // Update activity badge in header
+    updateActivityBadge();
     
     if (count === 0) {
         DOM.activityList.innerHTML = '';
@@ -1017,11 +1089,44 @@ function closeNotificationsPanel() {
 function toggleSystemArm() {
     AppState.systemArmed = !AppState.systemArmed;
     const status = AppState.systemArmed ? 'Armed' : 'Disarmed';
+    
+    // Update system status badge
     DOM.systemStatus.textContent = status;
     DOM.systemStatus.className = `system-status ${AppState.systemArmed ? 'armed' : 'disarmed'}`;
-    DOM.armBtn.querySelector('span').textContent = AppState.systemArmed ? 'Disarm' : 'Arm System';
+    
+    // Update the main arm button
+    DOM.armBtn.className = `arm-control-btn ${AppState.systemArmed ? 'armed' : 'disarmed'}`;
+    const statusText = DOM.armBtn.querySelector('.arm-status-text');
+    const actionText = DOM.armBtn.querySelector('.arm-action-text');
+    if (statusText) statusText.textContent = AppState.systemArmed ? 'System Armed' : 'System Disarmed';
+    if (actionText) actionText.textContent = AppState.systemArmed ? 'Tap to Disarm' : 'Tap to Arm';
+    
     logSecurityEvent('system', `System ${status}`, `Security system ${AppState.systemArmed ? 'activated' : 'deactivated'} manually`, 'Control Panel');
     showToast(`System ${status.toLowerCase()}`);
+}
+
+// ============================================
+// Activity Drawer
+// ============================================
+
+function openActivityDrawer() {
+    DOM.activityDrawer?.classList.add('open');
+    DOM.activityDrawerOverlay?.classList.add('open');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeActivityDrawer() {
+    DOM.activityDrawer?.classList.remove('open');
+    DOM.activityDrawerOverlay?.classList.remove('open');
+    document.body.style.overflow = '';
+}
+
+function updateActivityBadge() {
+    if (DOM.activityBadge && AppState.activities.length > 0) {
+        DOM.activityBadge.classList.remove('hidden');
+    } else if (DOM.activityBadge) {
+        DOM.activityBadge.classList.add('hidden');
+    }
 }
 
 // ============================================
@@ -1073,7 +1178,12 @@ function initEventListeners() {
     // Quick Actions
     DOM.armBtn?.addEventListener('click', toggleSystemArm);
     DOM.camerasBtn?.addEventListener('click', () => showToast('Camera view coming soon'));
-    DOM.historyBtn?.addEventListener('click', () => showToast('Full history coming soon'));
+    DOM.historyBtn?.addEventListener('click', openActivityDrawer);
+    
+    // Activity Drawer
+    DOM.activityDrawerBtn?.addEventListener('click', openActivityDrawer);
+    DOM.closeDrawerBtn?.addEventListener('click', closeActivityDrawer);
+    DOM.activityDrawerOverlay?.addEventListener('click', closeActivityDrawer);
     
     // Activity Modal
     DOM.closeModalBtn?.addEventListener('click', closeActivityModal);

@@ -902,17 +902,21 @@ body {
 .status-item .status-icon {
     width: 36px;
     height: 36px;
+    min-width: 36px;
+    min-height: 36px;
     display: flex;
     align-items: center;
     justify-content: center;
     background: var(--accent-glow);
     border-radius: var(--radius-sm);
     color: var(--accent-primary);
+    flex-shrink: 0;
 }
 
 .status-item .status-icon svg {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
 }
 
 .status-info {
@@ -1054,6 +1058,7 @@ body {
     color: var(--text-secondary);
     display: -webkit-box;
     -webkit-line-clamp: 1;
+    line-clamp: 1;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
@@ -1119,6 +1124,137 @@ body {
 }
 
 /* ============================================
+   Primary Arm Control Button
+   ============================================ */
+
+.arm-control-section {
+    margin-bottom: var(--spacing-lg);
+    display: flex;
+    justify-content: center;
+}
+
+.arm-control-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-md);
+    width: auto;
+    max-width: 280px;
+    padding: var(--spacing-md) var(--spacing-xl);
+    background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-tertiary) 100%);
+    border: 2px solid var(--accent-success);
+    border-radius: var(--radius-xl);
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    position: relative;
+    overflow: hidden;
+}
+
+.arm-control-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--accent-success-glow);
+    opacity: 0.3;
+    transition: opacity var(--transition-normal);
+}
+
+.arm-control-btn:hover::before {
+    opacity: 0.5;
+}
+
+.arm-control-btn:active {
+    transform: scale(0.98);
+}
+
+.arm-control-btn.armed {
+    border-color: var(--accent-success);
+}
+
+.arm-control-btn.armed::before {
+    background: var(--accent-success-glow);
+}
+
+.arm-control-btn.disarmed {
+    border-color: var(--accent-warning);
+}
+
+.arm-control-btn.disarmed::before {
+    background: var(--accent-warning-glow);
+}
+
+.arm-icon-ring {
+    position: relative;
+    width: 56px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-primary);
+    border-radius: 50%;
+    flex-shrink: 0;
+    z-index: 1;
+}
+
+.arm-control-btn.armed .arm-icon-ring {
+    box-shadow: 0 0 0 3px var(--accent-success), 0 0 20px var(--accent-success-glow);
+    color: var(--accent-success);
+}
+
+.arm-control-btn.disarmed .arm-icon-ring {
+    box-shadow: 0 0 0 3px var(--accent-warning), 0 0 20px var(--accent-warning-glow);
+    color: var(--accent-warning);
+}
+
+.arm-icon-ring svg {
+    width: 28px;
+    height: 28px;
+}
+
+.arm-label {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    z-index: 1;
+}
+
+.arm-status-text {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+}
+
+.arm-control-btn.armed .arm-status-text {
+    color: var(--accent-success);
+}
+
+.arm-control-btn.disarmed .arm-status-text {
+    color: var(--accent-warning);
+}
+
+.arm-action-text {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+/* Pulse animation for armed state */
+@keyframes armPulse {
+    0%, 100% {
+        box-shadow: 0 0 0 3px var(--accent-success), 0 0 20px var(--accent-success-glow);
+    }
+    50% {
+        box-shadow: 0 0 0 6px var(--accent-success), 0 0 40px var(--accent-success-glow);
+    }
+}
+
+.arm-control-btn.armed .arm-icon-ring {
+    animation: armPulse 3s ease-in-out infinite;
+}
+
+/* ============================================
    Quick Actions
    ============================================ */
 
@@ -1126,6 +1262,10 @@ body {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: var(--spacing-sm);
+}
+
+.quick-actions.two-col {
+    grid-template-columns: repeat(2, 1fr);
 }
 
 .action-btn {
@@ -1153,6 +1293,85 @@ body {
 .action-btn svg {
     width: 24px;
     height: 24px;
+}
+
+/* ============================================
+   Activity Drawer
+   ============================================ */
+
+.drawer-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    visibility: hidden;
+    transition: all var(--transition-normal);
+    z-index: 200;
+}
+
+.drawer-overlay.open {
+    opacity: 1;
+    visibility: visible;
+}
+
+.activity-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 85%;
+    max-width: 360px;
+    background: var(--bg-secondary);
+    border-left: 1px solid var(--border-color);
+    transform: translateX(100%);
+    transition: transform var(--transition-normal);
+    z-index: 201;
+    display: flex;
+    flex-direction: column;
+}
+
+.activity-drawer.open {
+    transform: translateX(0);
+}
+
+.drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-lg);
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-tertiary);
+}
+
+.drawer-header h2 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.drawer-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--spacing-md);
+}
+
+.drawer-content .activity-count {
+    display: block;
+    margin-bottom: var(--spacing-md);
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-family: 'IBM Plex Mono', monospace;
+}
+
+.drawer-content .activity-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.drawer-content .empty-state {
+    padding: var(--spacing-xl) var(--spacing-md);
 }
 
 /* FAB */
