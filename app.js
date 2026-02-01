@@ -426,17 +426,18 @@ async function initBiometrics() {
     if (!AppState.isMedianApp) return;
     
     try {
-        // median.auth.status() returns native device info:
-        // { hasFaceId: bool, hasTouchId: bool, hasSecret: bool }
+        // median.auth.status() returns:
+        // { hasTouchId: bool, biometryType: 'touchId'|'faceId'|'none', hasSecret: bool }
         const status = await median.auth.status();
         console.log('Biometric status:', status);
         
-        AppState.biometricAvailable = status.hasTouchId || status.hasFaceId;
+        AppState.biometricAvailable = status.hasTouchId; // true if ANY biometrics available
         AppState.hasBiometrics = status.hasSecret;
         
-        if (status.hasFaceId) {
+        // Use biometryType to determine Face ID vs Touch ID (per Median docs)
+        if (status.biometryType === 'faceId') {
             AppState.biometricType = 'faceId';
-        } else if (status.hasTouchId) {
+        } else if (status.biometryType === 'touchId') {
             AppState.biometricType = 'touchId';
         }
         
@@ -444,6 +445,9 @@ async function initBiometrics() {
         
         // Update all biometric text elements after detection
         updateAllBiometricText();
+        
+        // Update the unlock button icon
+        updateUnlockButtonIcon();
         
         // Now determine which auth screen to show
         determineAuthScreen();
