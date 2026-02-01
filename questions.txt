@@ -55,6 +55,17 @@ The median protocol is good for simple one way communication on the bridge, not 
 
 Issues I ran into:
 
+How to determine if a device is using Face or Touch id so i can display the right option in the UI flow?
+- The MJB has a javascript function to check for any biometric authentication thats available median.auth.status({'callbackFunction': CALLBACK});
+
+The app will execute CALLBACK with an object parameter containing the fields:
+
+hasTouchId: true or false. Indicates if the device is running iOS 9+ and there are fingerprints enrolled, or FaceID is enabled.
+biometryType: ‘touchId’, ‘faceId’, or ‘none’. This field is populated on iOS only to differentiate between TouchID and FaceID.
+hasSecret: true or false
+
+
+
 Apple Developer account required for push notification plugin, relies on APN's (Apple Push Notification service) an needs APN key
 
 How it works:
