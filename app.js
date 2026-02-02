@@ -748,9 +748,9 @@ function setupPasswordToggle(button, passwordInput) {
 async function loadUserData() {
     try {
         if (AppState.isMedianApp) {
-            const result = await median.datastore.get({ key: 'atlas_user_profile' });
-            if (result && result.value) {
-                AppState.userProfile = JSON.parse(result.value);
+            const result = await median.storage.app.get({ key: 'atlas_user_profile' });
+            if (result && result.data) {
+                AppState.userProfile = JSON.parse(result.data);
             }
         } else {
             const stored = localStorage.getItem('atlas_user_profile');
@@ -774,7 +774,7 @@ async function saveUserProfileToStore() {
         const profileJson = JSON.stringify(AppState.userProfile);
         
         if (AppState.isMedianApp) {
-            await median.datastore.set({ key: 'atlas_user_profile', value: profileJson });
+            await median.storage.app.set({ key: 'atlas_user_profile', value: profileJson });
         }
         
         localStorage.setItem('atlas_user_profile', profileJson);
@@ -802,9 +802,9 @@ async function saveUserProfile(e) {
 async function loadActivities() {
     try {
         if (AppState.isMedianApp) {
-            const result = await median.datastore.get({ key: 'atlas_activities' });
-            if (result && result.value) {
-                AppState.activities = JSON.parse(result.value);
+            const result = await median.storage.app.get({ key: 'atlas_activities' });
+            if (result && result.data) {
+                AppState.activities = JSON.parse(result.data);
             } else {
                 AppState.activities = [];
             }
@@ -865,7 +865,7 @@ async function saveActivities() {
         const activitiesJson = JSON.stringify(AppState.activities);
         
         if (AppState.isMedianApp) {
-            await median.datastore.set({ key: 'atlas_activities', value: activitiesJson });
+            await median.storage.app.set({ key: 'atlas_activities', value: activitiesJson });
         }
         
         localStorage.setItem('atlas_activities', activitiesJson);
@@ -1104,10 +1104,6 @@ function closeNotificationsPanel() {
 function toggleSystemArm() {
     AppState.systemArmed = !AppState.systemArmed;
     const status = AppState.systemArmed ? 'Armed' : 'Disarmed';
-    
-    // Update system status badge
-    DOM.systemStatus.textContent = status;
-    DOM.systemStatus.className = `system-status ${AppState.systemArmed ? 'armed' : 'disarmed'}`;
     
     // Update the main arm button
     DOM.armBtn.className = `arm-control-btn ${AppState.systemArmed ? 'armed' : 'disarmed'}`;

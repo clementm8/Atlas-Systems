@@ -1,26 +1,46 @@
 Customer profile:
-
-- Atlas Systems, home surveilance company
+- Atlas Systems, home security and surveilance company
 
 Website:
 - https://atlas-systems.vercel.app/
 
 Project Description:
-A native IOS app built using Median.co for Atlas Systems to allow users access and monitor their home security system securely.
+A native IOS app built using Median.co to allow users access and monitor their home security system securely.
 
 
 Project Requirements:
 - IOS native
 - Push notifications: Live updates on events such as motion detected at home, alarm activated, and software update required
-- Biometric Authentication: Using FaceId to login to the app
+- Biometric Authentication: Using FaceId/Touch id to login to the app
 - DataStore: Store user profile information and activity log locally
 
 
 Technical Implementation:
+
+The native app:
 - Uses Median Bridge via the Median Js library to access median.* methods for plugin functionality. 
 - The bridge is an API that the WebApp/Website uses to control the native app. 
 - Alternatively we could use the median protocol to access the bridge but it doesnt fit our usecase and its not the recommended approach:
 The median protocol is good for simple one way communication on the bridge, not back and forth where responses are needed
+
+
+----Features
+
+Biometric Authentication using Touch ID/FaceID:
+- The Median Face ID / Touch ID plugin uses the Median JavaScript Bridge to securely store and retrieve user credentials.
+- The Median plugin uses the app's private Keychain, which:
+Is isolated to your app
+Requires Face ID/Touch ID to access
+Doesn't sync to iCloud Keychain
+Isn't visible in Settings → Passwords
+- The plugin communicates between the web page and the native app by opening a specific URL with query parameters. Responses from the native app are returned via a callback function in the JavaScript context.
+- When a user creates an account, a secret(login credentials) is stored in the IOS keychain which can only be accessed through using a biomertic scan of the face or fingerprint
+- The next time the user tries to login to their account, they will have the option to login with face id/touch id
+
+Data store:
+- The Native Datastore Plugin lets us to persist/store key-value data such as user preferences and app settings directly on the user's device or in the cloud via the Median JavaScript Bridge.
+- It supports both App Storage and Cloud Storage
+- For this app we're storing the user's name, address, and activity log in the data store and displaying them in the areas of the UI
 
 
 ┌─────────────────────────────────────────────────────────────┐
@@ -51,6 +71,15 @@ The median protocol is good for simple one way communication on the bridge, not 
     └─────────────┘ └─────────────┘ └─────────────┘
 
 
+What you would improve or add with more time?
+- Geo fencing- Auto arm system when leaving home
+- Real-time push notifications for key events from the system such as 'Motion Detected', 'Alarm Activated' using One signal or Firebase loud messaging
+
+
+How you’d explain this implementation to a customer
+- The native app and webapp are from the same codebase, making it fster to develop than a native app and effecient to manage
+- This app extends the functionality of the product, improving security and accessibility through using biometric data to login and using the Datastore to keep sensitive data on the user's device
+
 
 
 Issues I ran into:
@@ -75,8 +104,6 @@ APN routes the notification to the correct user's device
 The device displays the notification to the user
 
 
-
-'Median is not defined' error I see in my web console?
-This error occurs because the JavaScript Bridge Library is either not injected into your webpage or has not been initialized. The mobile app injects the library into your webpage DOM at runtime, meaning it is not accessible through a desktop browser.
-
-If you would like to avoid the injection, Median offers an NPM Package to simplify usage within web frameworks such as React. When using the NPM Package you are not dependant on the app to inject the library and should toggle the option to prevent the injection on the Website Overrides tab within the App Studio.
+Better approach to debugging, i dont have a lot of experience with Native app development or X code so i wasnt sure on how to test in the console log and check for errors
+I had to pish code to build on my ios device to test functionality since I knew what the final product should look like, i'm curious to see what tools and process you use in your workflow
+It was interesting stepping outside of my comfort zone while also being resourceful and using my existing knowledge on building on the web

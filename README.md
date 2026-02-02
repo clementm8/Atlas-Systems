@@ -217,6 +217,8 @@ This enables UI testing without a physical device.
 
 > "Atlas Systems shows how Median transforms a web dashboard into a native security app. The biometric login gives users confidence their security data is protected. The DataStore keeps their profile and activity history available instantly, even offline. And push notifications mean they'll never miss a security alert—whether it's motion at the front door or a sensor going offline. All of this without writing a single line of Swift or Kotlin."
 
+ **Geofencing** — Auto-arm when leaving home
+
 ## Resources
 
 - [Median Documentation](https://docs.median.co)
@@ -226,5 +228,3 @@ This enables UI testing without a physical device.
 - [OneSignal Setup](https://docs.median.co/docs/onesignal)
 
 ---
-
-Built for Median.co Solutions Engineer Exercise
