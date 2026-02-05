@@ -115,7 +115,6 @@ const DOM = {
     hubStatusIndicator: document.getElementById('hub-status-indicator'),
     hubStatusDot: document.getElementById('hub-status-dot'),
     hubStatusText: document.getElementById('hub-status-text'),
-    rescanHubBtn: document.getElementById('rescan-hub-btn'),
     addDeviceBtn: document.getElementById('add-device-btn'),
     historyBtn: document.getElementById('history-btn'),
     activityList: document.getElementById('activity-list'),
@@ -1110,7 +1109,6 @@ function initEventListeners() {
     DOM.profileBtn?.addEventListener('click', openProfilePanel);
     DOM.addDeviceBtn?.addEventListener('click', scanBarcode);
     DOM.historyBtn?.addEventListener('click', openActivityDrawer);
-    DOM.rescanHubBtn?.addEventListener('click', scanBarcode);
     
     // Activity Drawer
     DOM.activityDrawerBtn?.addEventListener('click', openActivityDrawer);
