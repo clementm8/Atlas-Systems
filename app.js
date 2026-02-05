@@ -625,65 +625,21 @@ async function saveCredentialsWithBiometrics(name, email, password) {
 // Barcode Scanner
 // ============================================
 
-async function checkCameraAvailability() {
+function scanBarcode() {
     if (!AppState.isMedianApp) {
-        // In browser, check if getUserMedia is available
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                stream.getTracks().forEach(track => track.stop()); // Stop the stream
-                return true;
-            } catch (error) {
-                console.log('Camera not available:', error);
-                return false;
-            }
-        }
-        return false;
-    }
-    
-    // In Median app, assume camera is available (plugin handles it)
-    // If camera fails, the scan will return an error
-    return true;
-}
-
-async function scanBarcode() {
-    if (!AppState.isMedianApp) {
-        // Check camera availability in browser
-        const hasCamera = await checkCameraAvailability();
-        
-        if (!hasCamera) {
-            DOM.scanStatus.textContent = 'Camera not available. Use manual entry below.';
-            DOM.scanStatus.className = 'status-text error';
-            if (DOM.manualEntryContainer) {
-                DOM.manualEntryContainer.style.display = 'block';
-            }
-            return;
-        }
-        
         // Demo mode - simulate a scan
         const demoCode = 'ATLAS-' + Math.random().toString(36).substring(2, 10).toUpperCase();
-        handleScanResult({ success: true, code: demoCode, type: 'qr' });
+        handleScanResult({ success: true, code: demoCode });
         return;
     }
     
-    try {
-        // Set custom prompt
-        if (median.barcode.setPrompt) {
-            median.barcode.setPrompt('Align the barcode on your Atlas product within the frame');
+    median.barcode.scan({
+        callback: function(data) {
+            if (data?.code) {
+                handleScanResult({ success: true, code: data.code });
+            }
         }
-        
-        const result = await median.barcode.scan();
-        handleScanResult(result);
-    } catch (error) {
-        console.error('Scan error:', error);
-        DOM.scanStatus.textContent = 'Scan failed. Camera may be unavailable. Use manual entry below.';
-        DOM.scanStatus.className = 'status-text error';
-        
-        // Show manual entry option on error
-        if (DOM.manualEntryContainer) {
-            DOM.manualEntryContainer.style.display = 'block';
-        }
-    }
+    });
 }
 
 function handleManualEntry() {
