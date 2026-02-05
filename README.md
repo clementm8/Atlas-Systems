@@ -1,22 +1,22 @@
 # Atlas Systems - Home Security Management
 
-A smart home security management app demonstrating Median.co's native plugin capabilities: **Biometric Authentication** and **QR Code Scanner**.
+A smart home security management app demonstrating Median.co's native plugin capabilities: **Biometric Authentication** and **QR/Barcode Scanner**.
 
 ## Overview
 
-Atlas Systems is a product management dashboard that showcases how web apps can leverage native device features through Median's JavaScript Bridge. Users can scan QR codes on Atlas products using their device camera and register them to their account.
+Atlas Systems is a product management dashboard that showcases how web apps can leverage native device features through Median's JavaScript Bridge. Users can scan Atlas product barcodes using their device camera and register them to their account.
 
 ### Plugin Integration
 
 | Plugin | Feature | Use Case |
 |--------|---------|----------|
 | **Biometrics** | Face ID / Touch ID | Secure login to product dashboard |
-| **QR Code Scanner** | Device camera | Scan and register Atlas products via QR codes |
+| **Barcode Scanner** | Device camera | Scan and register Atlas product barcodes |
 
 ## Features
 
 ### Product Registration
-- **QR Code Scanning** — Use device camera to scan QR codes on Atlas products
+- **Barcode Scanning** — Use device camera to scan any Atlas product barcode
 - **Product Display** — Registered products appear as "Atlas Sensor" on dashboard
 - **Offline Support** — All data stored locally using localStorage
 
@@ -63,7 +63,7 @@ npx vercel
 - Navigate to **Native Plugins** → **Biometric Auth**
 - Enable the plugin
 
-#### QR Code Scanner
+#### QR/Barcode Scanner
 - Navigate to **Native Plugins** → **QR / Barcode Scanner**
 - Enable the plugin
 - Optionally set a custom prompt message
@@ -72,7 +72,7 @@ npx vercel
 
 1. Click **Build** in Median App Studio
 2. Download dev build to your device
-3. Test biometrics and QR code scanning on physical device
+3. Test biometrics and barcode scanning on physical device
 
 ## Project Structure
 
@@ -100,21 +100,15 @@ const result = await median.auth.get();
 // { success: bool, secret: string }
 ```
 
-### QR Code Scanner
+### Barcode Scanner
 ```javascript
 // Set custom prompt (optional)
-median.barcode.setPrompt('Scan QR code on your Atlas product');
+median.barcode.setPrompt('Align the barcode on your Atlas product within the frame');
 
-// Scan QR code (triggers native camera scanner)
-median.barcode.scan({
-    callback: function(data) {
-        if (data?.code) {
-            // Handle scanned QR code
-            console.log('Scanned:', data.code);
-        }
-    }
-});
-// Returns: { code: string, type: 'qr' }
+// Scan barcode (triggers native camera scanner)
+const result = await median.barcode.scan();
+// { success: bool, code: string, type: string, error: string }
+// Example: { success: true, code: 'ATLAS-ABC123', type: 'qr' }
 ```
 
 ## Technical Decisions
@@ -125,13 +119,13 @@ Product registration is an ideal use case for these plugins:
 
 1. **Biometrics** — Users expect secure authentication for account access. Face ID/Touch ID provides seamless, secure login.
 
-2. **QR Code Scanner** — Native camera access enables instant product registration. Users simply point their camera at a QR code on any Atlas product to register it.
+2. **Barcode Scanner** — Native camera access enables instant product registration. Users simply point their camera at any Atlas product barcode to register it.
 
 ### Browser Fallback Strategy
 
 The app gracefully degrades in browsers:
 - **Biometrics** → Sign in form (demo mode)
-- **QR Code Scanner** → Generates demo QR code for testing
+- **Barcode Scanner** → Generates demo barcode code for testing
 
 This enables UI testing without a physical device.
 
@@ -171,7 +165,7 @@ This enables UI testing without a physical device.
 ## User Flow
 
 1. **Sign Up** → Create account with name, email, address
-2. **Add Product** → Scan QR code on any Atlas product
+2. **Add Product** → Scan barcode on any Atlas product
 3. **Dashboard** → View registered product and activity log
 4. **Returning Users** → Biometric login or password sign in
 
@@ -179,20 +173,20 @@ This enables UI testing without a physical device.
 
 ### Why Atlas Systems?
 
-> "I chose a product registration app because it demonstrates practical use of native device capabilities. Biometrics provide secure, convenient authentication, while the QR code scanner enables instant product registration using the device camera. It's a use case where native features create a seamless user experience that wouldn't be possible in a standard web browser."
+> "I chose a product registration app because it demonstrates practical use of native device capabilities. Biometrics provide secure, convenient authentication, while the barcode scanner enables instant product registration using the device camera. It's a use case where native features create a seamless user experience that wouldn't be possible in a standard web browser."
 
 ### Plugin Selection Rationale
 
 | Plugin | Why It Matters |
 |--------|---------------|
 | **Biometrics** | Secure, convenient authentication without passwords |
-| **QR Code Scanner** | Native camera access enables instant product registration |
+| **Barcode Scanner** | Native camera access enables instant product registration |
 
 ### Technical Tradeoffs
 
 1. **Local-first architecture** — All data stored on device using localStorage for privacy and offline access. A production app would sync to a backend.
 
-2. **QR codes only** — The scanner accepts QR codes and displays them as registered products with customizable names.
+2. **Any barcode accepted** — The scanner accepts any barcode format (QR, Code128, etc.) and displays it as an "Atlas Sensor" for demo purposes.
 
 3. **Offline capability** — All user data and activity logs are stored locally, enabling full functionality without network connectivity.
 
@@ -206,13 +200,13 @@ This enables UI testing without a physical device.
 
 ### Customer Explanation
 
-> "Atlas Systems shows how Median transforms a web dashboard into a native product management app. The biometric login gives users quick, secure access to their account. The QR code scanner uses the device camera to instantly register any Atlas product—just point and scan. All product data is stored locally, so everything works offline. All of this without writing a single line of Swift or Kotlin."
+> "Atlas Systems shows how Median transforms a web dashboard into a native product management app. The biometric login gives users quick, secure access to their account. The barcode scanner uses the device camera to instantly register any Atlas product—just point and scan. All product data is stored locally, so everything works offline. All of this without writing a single line of Swift or Kotlin."
 
 ## Resources
 
 - [Median Documentation](https://docs.median.co)
 - [JavaScript Bridge Reference](https://docs.median.co/docs/javascript-bridge)
 - [Biometric Auth Docs](https://docs.median.co/docs/biometric-authentication)
-- [QR/Barcode Scanner Docs](https://docs.median.co/docs/qr-barcode-scanner) (configured for QR codes only)
+- [QR/Barcode Scanner Docs](https://docs.median.co/docs/qr-barcode-scanner)
 
 ---
