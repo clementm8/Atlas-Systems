@@ -3,10 +3,10 @@
  * 
  * Demonstrates integration with Median.co plugins:
  * - Biometric Authentication (Face ID / Touch ID)
- * - QR/Barcode Scanner (Device registration)
+ * - QR Code Scanner (Device registration)
  * 
  * Flow:
- * 1. First time user → Sign Up → Add Device (scan barcode) → Dashboard
+ * 1. First time user → Sign Up → Add Device (scan QR code) → Dashboard
  * 2. Returning user → Sign In / Biometric → Dashboard
  */
 
@@ -622,10 +622,10 @@ async function saveCredentialsWithBiometrics(name, email, password) {
 }
 
 // ============================================
-// Barcode Scanner
+// QR Code Scanner
 // ============================================
 
-function scanBarcode() {
+function scanQRCode() {
     if (!AppState.isMedianApp) {
         // Demo mode - simulate a scan
         const demoCode = 'ATLAS-' + Math.random().toString(36).substring(2, 10).toUpperCase();
@@ -633,10 +633,37 @@ function scanBarcode() {
         return;
     }
     
+    // Set prompt for better UX
+    if (median.barcode.setPrompt) {
+        median.barcode.setPrompt('Scan QR code on your Atlas product');
+    }
+    
     median.barcode.scan({
         callback: function(data) {
+            console.log('Scan result:', data);
+            
+            // Handle success - QR code only
             if (data?.code) {
-                handleScanResult({ success: true, code: data.code });
+                handleScanResult({ success: true, code: data.code, type: 'qr' });
+            } 
+            // Handle cancellation or error
+            else if (data?.cancelled || data?.error) {
+                if (DOM.scanStatus) {
+                    DOM.scanStatus.textContent = 'Scan cancelled. You can try again or enter code manually.';
+                    DOM.scanStatus.className = 'status-text';
+                }
+                // Show manual entry as fallback
+                if (DOM.manualEntryContainer) {
+                    DOM.manualEntryContainer.style.display = 'flex';
+                }
+            }
+            // Unknown response - log for debugging
+            else {
+                console.log('Unexpected scan response:', JSON.stringify(data));
+                if (DOM.scanStatus) {
+                    DOM.scanStatus.textContent = 'Scan completed. Check if code was captured.';
+                    DOM.scanStatus.className = 'status-text';
+                }
             }
         }
     });
@@ -688,7 +715,7 @@ function handleScanResult(data) {
         const logType = data.type === 'manual' ? 'Device Entered' : 'Device Scanned';
         logActivity('scan', logType, `${data.type === 'manual' ? 'Entered' : 'Scanned'} device code: ${data.code}`);
     } else {
-        DOM.scanStatus.textContent = data.error || 'No barcode detected. Try again.';
+        DOM.scanStatus.textContent = data.error || 'No QR code detected. Try again.';
         DOM.scanStatus.className = 'status-text error';
     }
 }
@@ -1117,8 +1144,8 @@ function toggleProductStatus(productId) {
 
 function handleAddDeviceClick() {
     if (AppState.isMedianApp) {
-        // In Median app, use barcode scanner
-        scanBarcode();
+        // In Median app, use QR code scanner
+        scanQRCode();
     } else {
         // In browser, open manual entry modal
         openAddProductModal();
@@ -1249,7 +1276,7 @@ function initEventListeners() {
     DOM.useDifferentAccount?.addEventListener('click', clearAccountAndLogout);
     
     // Add Device Screen
-    DOM.scanDeviceBtn?.addEventListener('click', scanBarcode);
+    DOM.scanDeviceBtn?.addEventListener('click', scanQRCode);
     DOM.confirmDeviceBtn?.addEventListener('click', confirmDevice);
     DOM.submitManualCodeBtn?.addEventListener('click', handleManualEntry);
     DOM.manualCodeInput?.addEventListener('keydown', (e) => {

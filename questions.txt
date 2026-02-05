@@ -25,21 +25,28 @@ The plugin you selected and how it works
               Security- Instead of username and password, users use a scan of their Face/Fingerprint 
               Median does not store this secret on our end, it stays on the users device
 
-- Barcode code Scanner:
-       - This uses the device's camera to scan the barcode for device activation
+- QR Code Scanner:
+       - This uses the device's camera to scan QR codes for product registration
+       - Accepts any QR code - users can generate QR codes with product codes
+       - Users can also manually enter product codes if scanning isn't available
+       - When scanning, users can customize the product name (e.g., "Living Room Sensor")
 
        Why?
        - Better user experience as current setup used a 12 digit code- reduces user error, 3 to 5 times faster onboarding, more accessible for users with visibility issues
-       - Works with existing infrastructure since current products already have barcodes
 
-I built in graceful fallbacks for both plugins. The app first checks if the device supports biometrics - if not, users see the traditional login form. Same with the barcode scanner - if there's no camera access, the app automatically shows the manual code entry field instead.
+
+I built in graceful fallbacks for both plugins. The app first checks if the device supports biometrics - if not, users see the traditional login form. Same with the QR code scanner - if there's no camera access or scanning fails, the app automatically shows the manual code entry field instead.
+
+The app supports multiple products - users can register multiple Atlas devices, each with a custom name. Products can be individually activated/deactivated with a toggle switch, and all product data is stored locally using localStorage for offline access.
 
 
 ┌─────────────────────────────────────────────────────────────┐
 │                     YOUR Website                            │
 │                                                             │
 │   ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    │
-│   │  Sign Up    │───▶│ Add Device  │───▶│  Dashboard  │    │
+│   │  Sign In    │───▶│ Add Device  │───▶│  Dashboard  │    │
+│   │  (or Sign   │    │ (Scan/QR/   │    │             │    │
+│   │    Up)      │    │  Manual)    │    │             │    │
 │   └──────┬──────┘    └──────┬──────┘    └──────┬──────┘    │
 │          │                  │                  │            │
 │          ▼                  ▼                  ▼            │
@@ -51,8 +58,8 @@ I built in graceful fallbacks for both plugins. The app first checks if the devi
                 ┌──────────┴──────────┐
                 ▼                     ▼
          ┌─────────────┐       ┌─────────────┐
-         │ median.auth │       │   median.   │
-         │ (Biometrics)│       │   barcode   │
+         │ median.auth │       │median.barcode│
+         │ (Biometrics)│       │  (QR Code)  │
          └──────┬──────┘       └──────┬──────┘
                 │                     │
                 ▼                     ▼
@@ -77,11 +84,11 @@ What you would improve or add with more time
 
 How you’d explain this implementation to a customer? 
 
-This app displays the content that is on your website, but uses our platform to access native features on the user's device, specifically biometric authentication and barcode scanning.
+This app displays the content that is on your website, but uses our platform to access native features on the user's device, specifically biometric authentication and QR code scanning.
 The biometric authentication allows users to login with a scan of their face or fingerprint, reducing any friction and making the login process much faster and secure
-The barcode scanner uses the devices camera to scan and activate Atlas products, 85% faster than the current process of entering a 12 digit code
+The QR code scanner uses the device's camera to scan and register Atlas products, 85% faster than the current process of entering a 12 digit code.
 
-Both of these features are built into your current flow, keeping the user experience identical. The option for biometric authentication and barcode scanner only appear if their device supports it, otherwise users will be presented with the current flow of username/password and entering device code for activation.
+Both of these features are built into your current flow, keeping the user experience identical. The option for biometric authentication and qrcode scanner only appear if their device supports it, otherwise users will be presented with the current flow of username/password and entering device code for activation.
 
 
 - No app and user data is saved on our servers, everything goes straight from your website to the app
@@ -97,6 +104,7 @@ Tradeoff: Harder to troubleshoot issues compared to pure web development
 
 How I handled it:
 - Test on actual device (not just simulator)
+- Created a QR code generator tool for testing QR code scanning functionality
 - Knowing what the final result should look like
 - I'm curious to see what tools and process you use in your workflow
 - It was interesting stepping outside of my comfort zone while also being resourceful and using my existing knowledge on building on the web
