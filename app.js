@@ -1,15 +1,13 @@
 /**
- * Atlas Systems - Home Security Management
+ * Atlas Systems - Home Security System
  * 
  * Demonstrates integration with Median.co plugins:
- * - Biometric Authentication (Face ID / Touch ID) - Save & retrieve login credentials
- * - DataStore (User profile & activity storage)
- * - Push Notifications (Security alerts via OneSignal)
+ * - Biometric Authentication (Face ID / Touch ID)
+ * - QR/Barcode Scanner (Device registration)
  * 
- * Auth Flow:
- * 1. First time user → Sign Up form → Create account → Save with biometrics
- * 2. Returning user (no biometrics) → Sign In form
- * 3. Returning user (with biometrics) → Biometric unlock screen
+ * Flow:
+ * 1. First time user → Sign Up → Add Device (scan barcode) → Dashboard
+ * 2. Returning user → Sign In / Biometric → Dashboard
  */
 
 // ============================================
@@ -21,31 +19,31 @@ const AppState = {
     isAuthenticated: false,
     
     // Account status
-    hasAccount: false,      // Has created an account (stored locally)
-    hasBiometrics: false,   // Has biometric credentials saved
+    hasAccount: false,
+    hasBiometrics: false,
+    hasDevice: false,
     
     // Biometrics info
     biometricAvailable: false,
-    biometricType: 'biometrics', // 'faceId' or 'touchId' or 'biometrics'
+    biometricType: 'biometrics',
     
-    // Saved account info (from localStorage)
-    savedAccount: {
-        name: '',
-        email: ''
-    },
-    
-    // User profile (from DataStore)
+    // User profile (localStorage)
     userProfile: {
         name: '',
         email: '',
         address: ''
     },
     
-    // Security activity log
-    activities: [],
+    // Registered Atlas product (displayed as sensor)
+    motionSensor: {
+        code: '',
+        name: 'Atlas Sensor',
+        connectedAt: null,
+        status: 'offline'
+    },
     
-    // System status
-    systemArmed: true,
+    // Activity log
+    activities: [],
     
     // Editing state
     editingActivityId: null
@@ -58,6 +56,7 @@ const AppState = {
 const DOM = {
     // Screens
     lockScreen: document.getElementById('lock-screen'),
+    addDeviceScreen: document.getElementById('add-device-screen'),
     vaultScreen: document.getElementById('vault-screen'),
     
     // Auth Containers
@@ -69,9 +68,9 @@ const DOM = {
     signupForm: document.getElementById('signup-form'),
     signupName: document.getElementById('signup-name'),
     signupEmail: document.getElementById('signup-email'),
+    signupAddress: document.getElementById('signup-address'),
     signupPassword: document.getElementById('signup-password'),
     signupConfirm: document.getElementById('signup-confirm'),
-    signupAddress: document.getElementById('signup-address'),
     signupBiometricOption: document.getElementById('signup-biometric-option'),
     signupEnableBiometric: document.getElementById('signup-enable-biometric'),
     signupBiometricText: document.getElementById('signup-biometric-text'),
@@ -101,20 +100,30 @@ const DOM = {
     usePasswordBtn: document.getElementById('use-password-btn'),
     useDifferentAccount: document.getElementById('use-different-account'),
     
+    // Add Device Screen
+    scanDeviceBtn: document.getElementById('scan-device-btn'),
+    scanStatus: document.getElementById('scan-status'),
+    scannedDevicePreview: document.getElementById('scanned-device-preview'),
+    deviceCode: document.getElementById('device-code'),
+    confirmDeviceBtn: document.getElementById('confirm-device-btn'),
+    skipDeviceBtn: document.getElementById('skip-device-btn'),
+    
     // Dashboard
     userGreeting: document.getElementById('user-greeting'),
-    systemStatus: document.getElementById('system-status'),
+    hubName: document.getElementById('hub-name'),
+    hubCode: document.getElementById('hub-code'),
+    hubStatusIndicator: document.getElementById('hub-status-indicator'),
+    hubStatusDot: document.getElementById('hub-status-dot'),
+    hubStatusText: document.getElementById('hub-status-text'),
+    rescanHubBtn: document.getElementById('rescan-hub-btn'),
+    addDeviceBtn: document.getElementById('add-device-btn'),
+    historyBtn: document.getElementById('history-btn'),
     activityList: document.getElementById('activity-list'),
     emptyState: document.getElementById('empty-state'),
     activityCount: document.getElementById('activity-count'),
     addNoteBtn: document.getElementById('add-note-btn'),
     lockBtn: document.getElementById('lock-btn'),
     profileBtn: document.getElementById('profile-btn'),
-    
-    // Quick Actions
-    armBtn: document.getElementById('arm-btn'),
-    camerasBtn: document.getElementById('cameras-btn'),
-    historyBtn: document.getElementById('history-btn'),
     
     // Activity Drawer
     activityDrawerBtn: document.getElementById('activity-drawer-btn'),
@@ -130,7 +139,6 @@ const DOM = {
     noteId: document.getElementById('note-id'),
     eventType: document.getElementById('event-type'),
     noteContent: document.getElementById('note-content'),
-    noteLocation: document.getElementById('note-location'),
     closeModalBtn: document.getElementById('close-modal-btn'),
     deleteNoteBtn: document.getElementById('delete-note-btn'),
     
@@ -141,7 +149,8 @@ const DOM = {
     userName: document.getElementById('user-name'),
     userEmail: document.getElementById('user-email'),
     userAddress: document.getElementById('user-address'),
-    profileAddressDisplay: document.getElementById('profile-address-display'),
+    profileHubCode: document.getElementById('profile-hub-code'),
+    profileHubStatus: document.getElementById('profile-hub-status'),
     
     // Toast
     toastContainer: document.getElementById('toast-container')
@@ -153,22 +162,19 @@ const DOM = {
 
 const ActivityIcons = {
     motion: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-        <circle cx="9" cy="7" r="4"/>
-        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+        <circle cx="12" cy="10" r="6"/>
+        <circle cx="12" cy="10" r="2"/>
+        <path d="M5 10 Q2 8 5 5" opacity="0.6"/>
+        <path d="M19 10 Q22 8 19 5" opacity="0.6"/>
+        <rect x="8" y="18" width="8" height="3" rx="1"/>
+        <line x1="12" y1="16" x2="12" y2="18"/>
     </svg>`,
-    door: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-        <polyline points="9 22 9 12 15 12 15 22"/>
-    </svg>`,
-    camera: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-        <path d="M23 7l-7 5 7 5V7z"/>
-        <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
-    </svg>`,
-    sensor: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-        <circle cx="12" cy="12" r="3"/>
-        <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+    scan: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M3 7V5a2 2 0 0 1 2-2h2"/>
+        <path d="M17 3h2a2 2 0 0 1 2 2v2"/>
+        <path d="M21 17v2a2 2 0 0 1-2 2h-2"/>
+        <path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
+        <line x1="7" y1="12" x2="17" y2="12"/>
     </svg>`,
     system: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
         <circle cx="12" cy="12" r="3"/>
@@ -238,10 +244,8 @@ function showSignup() {
     hideAllAuthContainers();
     DOM.signupContainer.style.display = 'block';
     
-    // Show biometric option if available and in Median app
     if (AppState.biometricAvailable && AppState.isMedianApp) {
         DOM.signupBiometricOption.style.display = 'block';
-        // Ensure correct biometric text is shown
         updateBiometricText(DOM.signupBiometricText, 'Enable');
     } else {
         DOM.signupBiometricOption.style.display = 'none';
@@ -252,12 +256,10 @@ function showSignin() {
     hideAllAuthContainers();
     DOM.signinContainer.style.display = 'block';
     
-    // Pre-fill email if we have it
-    if (AppState.savedAccount.email) {
-        DOM.loginEmail.value = AppState.savedAccount.email;
+    if (AppState.userProfile.email) {
+        DOM.loginEmail.value = AppState.userProfile.email;
     }
     
-    // Show biometric option if available
     if (AppState.biometricAvailable) {
         DOM.biometricOption.style.display = 'block';
         updateBiometricText(DOM.biometricTypeText, 'Remember with');
@@ -269,17 +271,14 @@ function showBiometricUnlock() {
     DOM.biometricUnlockContainer.style.display = 'flex';
     DOM.biometricUnlockContainer.style.flexDirection = 'column';
     
-    // Display saved user info - only show name, not email
-    const displayName = AppState.savedAccount.name || AppState.userProfile.name;
+    const displayName = AppState.userProfile.name;
     if (displayName) {
         DOM.savedUserName.textContent = `Welcome back, ${displayName.split(' ')[0]}`;
     } else {
         DOM.savedUserName.textContent = 'Welcome back';
     }
-    // Hide email element
     DOM.savedUserEmail.style.display = 'none';
     
-    // Update unlock button icon and text
     updateUnlockButtonIcon();
 }
 
@@ -288,15 +287,12 @@ function updateUnlockButtonIcon() {
     if (!iconContainer) return;
     
     if (AppState.biometricType === 'faceId') {
-        // Face ID icon - Lucide "ScanFace" style
         iconContainer.innerHTML = `
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <!-- Scan frame corners -->
                 <path d="M3 7V5a2 2 0 0 1 2-2h2"/>
                 <path d="M17 3h2a2 2 0 0 1 2 2v2"/>
                 <path d="M21 17v2a2 2 0 0 1-2 2h-2"/>
                 <path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
-                <!-- Face features -->
                 <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
                 <path d="M9 9h.01"/>
                 <path d="M15 9h.01"/>
@@ -304,7 +300,6 @@ function updateUnlockButtonIcon() {
         `;
         DOM.unlockText.textContent = 'Unlock with Face ID';
     } else if (AppState.biometricType === 'touchId') {
-        // Touch ID / fingerprint icon
         iconContainer.innerHTML = `
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                 <path d="M2 12C2 6.5 6.5 2 12 2a10 10 0 0 1 8 4"/>
@@ -346,16 +341,52 @@ function unlockApp() {
     loadUserData();
     loadActivities();
     updateGreeting();
+    updateSensorDisplay();
+}
+
+function showAddDeviceScreen() {
+    showScreen('add-device-screen');
 }
 
 function updateGreeting() {
-    const name = AppState.userProfile.name || AppState.savedAccount.name;
+    const name = AppState.userProfile.name;
     if (name) {
         DOM.userGreeting.textContent = `Welcome, ${name.split(' ')[0]}`;
-    } else if (AppState.savedAccount.email) {
-        DOM.userGreeting.textContent = `Welcome, ${AppState.savedAccount.email.split('@')[0]}`;
+    } else if (AppState.userProfile.email) {
+        DOM.userGreeting.textContent = `Welcome, ${AppState.userProfile.email.split('@')[0]}`;
     } else {
         DOM.userGreeting.textContent = 'Welcome';
+    }
+}
+
+// ============================================
+// Sensor Display
+// ============================================
+
+function updateSensorDisplay() {
+    if (AppState.motionSensor.code) {
+        DOM.hubCode.textContent = AppState.motionSensor.code;
+        DOM.hubStatusDot.classList.add('active');
+        DOM.hubStatusText.textContent = 'Online';
+        AppState.motionSensor.status = 'online';
+        
+        if (DOM.profileHubCode) {
+            DOM.profileHubCode.textContent = AppState.motionSensor.code;
+        }
+        if (DOM.profileHubStatus) {
+            DOM.profileHubStatus.textContent = 'Online';
+        }
+    } else {
+        DOM.hubCode.textContent = 'No product registered';
+        DOM.hubStatusDot.classList.remove('active');
+        DOM.hubStatusText.textContent = 'Offline';
+        
+        if (DOM.profileHubCode) {
+            DOM.profileHubCode.textContent = 'Not registered';
+        }
+        if (DOM.profileHubStatus) {
+            DOM.profileHubStatus.textContent = 'Offline';
+        }
     }
 }
 
@@ -364,24 +395,28 @@ function updateGreeting() {
 // ============================================
 
 function determineAuthScreen() {
-    // Check for existing account
     const savedAccountData = localStorage.getItem('atlas_account');
     if (savedAccountData) {
-        AppState.savedAccount = JSON.parse(savedAccountData);
         AppState.hasAccount = true;
     }
     
-    // Determine which screen to show
+    const savedProfile = localStorage.getItem('atlas_user_profile');
+    if (savedProfile) {
+        AppState.userProfile = JSON.parse(savedProfile);
+    }
+    
+    const savedDevice = localStorage.getItem('atlas_motion_sensor');
+    if (savedDevice) {
+        AppState.motionSensor = JSON.parse(savedDevice);
+        AppState.hasDevice = true;
+    }
+    
     if (AppState.hasBiometrics && AppState.hasAccount) {
-        // Has biometrics saved → show biometric unlock
         showBiometricUnlock();
-        // Auto-trigger biometric after short delay
         setTimeout(() => authenticateWithBiometrics(), 600);
     } else if (AppState.hasAccount) {
-        // Has account but no biometrics → show sign in
         showSignin();
     } else {
-        // No account → show sign up
         showSignup();
     }
 }
@@ -408,27 +443,19 @@ async function initBiometrics() {
     if (!AppState.isMedianApp) return;
     
     try {
-        // median.auth.status() returns:
-        // { hasTouchId: bool, biometryType: 'touchId'|'faceId'|'none', hasSecret: bool }
         const status = await median.auth.status();
         
-        AppState.biometricAvailable = status.hasTouchId; // true if ANY biometrics available
+        AppState.biometricAvailable = status.hasTouchId;
         AppState.hasBiometrics = status.hasSecret;
         
-        // Use biometryType to determine Face ID vs Touch ID (per Median docs)
         if (status.biometryType === 'faceId') {
             AppState.biometricType = 'faceId';
         } else if (status.biometryType === 'touchId') {
             AppState.biometricType = 'touchId';
         }
         
-        // Update all biometric text elements after detection
         updateAllBiometricText();
-        
-        // Update the unlock button icon
         updateUnlockButtonIcon();
-        
-        // Now determine which auth screen to show
         determineAuthScreen();
         
     } catch (error) {
@@ -437,7 +464,6 @@ async function initBiometrics() {
     }
 }
 
-// Update all biometric text elements
 function updateAllBiometricText() {
     if (DOM.signupBiometricText) {
         updateBiometricText(DOM.signupBiometricText, 'Enable');
@@ -469,20 +495,20 @@ async function authenticateWithBiometrics() {
         const result = await median.auth.get();
         
         if (result.success && result.secret) {
-            // Parse saved credentials
             const credentials = JSON.parse(result.secret);
             
-            // Update saved account info
-            AppState.savedAccount.email = credentials.email;
-            AppState.savedAccount.name = credentials.name || '';
+            if (credentials.email) {
+                AppState.userProfile.email = credentials.email;
+            }
+            if (credentials.name) {
+                AppState.userProfile.name = credentials.name;
+            }
             
             DOM.biometricStatus.textContent = 'Authentication successful!';
             DOM.biometricStatus.className = 'status-text success';
             
-            // Log security event
-            logSecurityEvent('system', 'Biometric Login', 
-                `User authenticated via ${AppState.biometricType === 'faceId' ? 'Face ID' : 'Touch ID'}`, 
-                'Mobile Device');
+            logActivity('system', 'Biometric Login', 
+                `User authenticated via ${AppState.biometricType === 'faceId' ? 'Face ID' : 'Touch ID'}`);
             
             setTimeout(() => {
                 unlockApp();
@@ -532,6 +558,70 @@ async function saveCredentialsWithBiometrics(name, email, password) {
 }
 
 // ============================================
+// Barcode Scanner
+// ============================================
+
+async function scanBarcode() {
+    if (!AppState.isMedianApp) {
+        // Demo mode - simulate a scan
+        const demoCode = 'ATLAS-' + Math.random().toString(36).substring(2, 10).toUpperCase();
+        handleScanResult({ success: true, code: demoCode, type: 'qr' });
+        return;
+    }
+    
+    try {
+        // Set custom prompt
+        if (median.barcode.setPrompt) {
+            median.barcode.setPrompt('Align the barcode on your Atlas product within the frame');
+        }
+        
+        const result = await median.barcode.scan();
+        handleScanResult(result);
+    } catch (error) {
+        console.error('Scan error:', error);
+        DOM.scanStatus.textContent = 'Scan failed. Please try again.';
+        DOM.scanStatus.className = 'status-text error';
+    }
+}
+
+function handleScanResult(data) {
+    if (data.success && data.code) {
+        // Store the scanned code
+        AppState.motionSensor.code = data.code;
+        AppState.motionSensor.connectedAt = Date.now();
+        AppState.motionSensor.status = 'online';
+        AppState.hasDevice = true;
+        
+        // Show the preview
+        DOM.deviceCode.textContent = data.code;
+        DOM.scannedDevicePreview.style.display = 'block';
+        DOM.scanStatus.textContent = 'Device found!';
+        DOM.scanStatus.className = 'status-text success';
+        
+        // Log the scan
+        logActivity('scan', 'Device Scanned', `Scanned device code: ${data.code}`);
+    } else {
+        DOM.scanStatus.textContent = data.error || 'No barcode detected. Try again.';
+        DOM.scanStatus.className = 'status-text error';
+    }
+}
+
+function confirmDevice() {
+    // Save the device
+    saveMotionSensor();
+    
+    // Log the connection
+    logActivity('scan', 'Product Registered', `Atlas product registered: ${AppState.motionSensor.code}`);
+    
+    showToast('Product registered successfully!');
+    unlockApp();
+}
+
+function saveMotionSensor() {
+    localStorage.setItem('atlas_motion_sensor', JSON.stringify(AppState.motionSensor));
+}
+
+// ============================================
 // Sign Up Handler
 // ============================================
 
@@ -540,12 +630,11 @@ async function handleSignup(e) {
     
     const name = DOM.signupName.value.trim();
     const email = DOM.signupEmail.value.trim();
+    const address = DOM.signupAddress.value.trim();
     const password = DOM.signupPassword.value;
     const confirmPassword = DOM.signupConfirm.value;
-    const address = DOM.signupAddress.value.trim();
     const enableBiometric = DOM.signupEnableBiometric?.checked ?? false;
     
-    // Validation
     if (!name || !email || !password) {
         DOM.signupStatus.textContent = 'Please fill in all fields';
         DOM.signupStatus.className = 'status-text error';
@@ -564,7 +653,6 @@ async function handleSignup(e) {
         return;
     }
     
-    // Show loading
     DOM.signupSubmitBtn.disabled = true;
     DOM.signupSubmitBtn.innerHTML = `
         <svg class="spinner" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
@@ -572,13 +660,9 @@ async function handleSignup(e) {
     `;
     DOM.signupStatus.textContent = '';
     
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 500));
     
-    // Save credentials with biometrics FIRST if enabled
-    // This ensures the Face ID prompt happens during signup
     if (enableBiometric && AppState.biometricAvailable && AppState.isMedianApp) {
-        // Update status to show we're setting up biometrics
         DOM.signupSubmitBtn.innerHTML = `
             <svg class="spinner" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
             Setting up ${AppState.biometricType === 'faceId' ? 'Face ID' : 'Touch ID'}...
@@ -588,23 +672,21 @@ async function handleSignup(e) {
         if (saved) {
             showToast(`Account secured with ${AppState.biometricType === 'faceId' ? 'Face ID' : 'Touch ID'}`);
         } else {
-            // Biometric save failed - continue without biometrics
             showToast('Biometric setup skipped', 'warning');
         }
     }
     
-    // Save account locally
+    // Save account
     const accountData = { name, email, createdAt: Date.now() };
     localStorage.setItem('atlas_account', JSON.stringify(accountData));
-    AppState.savedAccount = accountData;
     AppState.hasAccount = true;
     
-    // Save initial profile
-    AppState.userProfile = { name, email, address: address || '' };
-    await saveUserProfileToStore();
+    // Save profile
+    AppState.userProfile = { name, email, address };
+    saveUserProfile();
     
-    // Log security event
-    logSecurityEvent('system', 'Account Created', 'New Atlas Systems account registered', 'Mobile Device');
+    // Log event
+    logActivity('system', 'Account Created', 'New Atlas Systems account registered');
     
     // Clear form
     DOM.signupForm.reset();
@@ -621,9 +703,9 @@ async function handleSignup(e) {
         Create Account
     `;
     
-    // Unlock app
-    unlockApp();
-    showToast('Welcome to Atlas Systems!');
+    // Go to Add Device screen
+    showToast('Account created! Now scan your Atlas product.');
+    showAddDeviceScreen();
 }
 
 // ============================================
@@ -643,7 +725,6 @@ async function handleSignin(e) {
         return;
     }
     
-    // Show loading
     DOM.loginSubmitBtn.disabled = true;
     DOM.loginSubmitBtn.innerHTML = `
         <svg class="spinner" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
@@ -651,41 +732,41 @@ async function handleSignin(e) {
     `;
     DOM.loginStatus.textContent = '';
     
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 800));
     
-    // Accept any valid-looking credentials
     if (email.includes('@') && password.length >= 1) {
-        // Update saved account
-        if (!AppState.savedAccount.name) {
-            AppState.savedAccount.name = email.split('@')[0];
+        if (!AppState.userProfile.name) {
+            AppState.userProfile.name = email.split('@')[0];
         }
-        AppState.savedAccount.email = email;
-        localStorage.setItem('atlas_account', JSON.stringify(AppState.savedAccount));
+        AppState.userProfile.email = email;
+        saveUserProfile();
         
-        // Save with biometrics if enabled
+        const accountData = { name: AppState.userProfile.name, email, createdAt: Date.now() };
+        localStorage.setItem('atlas_account', JSON.stringify(accountData));
+        
         if (rememberWithBiometric && AppState.biometricAvailable && AppState.isMedianApp) {
-            const saved = await saveCredentialsWithBiometrics(AppState.savedAccount.name, email, password);
+            const saved = await saveCredentialsWithBiometrics(AppState.userProfile.name, email, password);
             if (saved) {
                 showToast(`Login saved with ${AppState.biometricType === 'faceId' ? 'Face ID' : 'Touch ID'}`);
             }
         }
         
-        // Log security event
-        logSecurityEvent('system', 'Password Login', 'User authenticated with email/password', 'Mobile Device');
+        logActivity('system', 'Password Login', 'User authenticated with email/password');
         
-        // Clear form
         DOM.loginForm.reset();
         
-        // Unlock
-        unlockApp();
+        // Check if device exists, if not go to add device
+        if (!AppState.hasDevice) {
+            showAddDeviceScreen();
+        } else {
+            unlockApp();
+        }
         showToast('Welcome back!');
     } else {
         DOM.loginStatus.textContent = 'Invalid email or password';
         DOM.loginStatus.className = 'status-text error';
     }
     
-    // Reset button
     DOM.loginSubmitBtn.disabled = false;
     DOM.loginSubmitBtn.innerHTML = `
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -719,59 +800,30 @@ function setupPasswordToggle(button, passwordInput) {
 }
 
 // ============================================
-// DataStore - User Profile & Activities
+// User Profile (localStorage)
 // ============================================
 
-async function loadUserData() {
+function loadUserData() {
     try {
-        if (AppState.isMedianApp) {
-            const result = await median.storage.app.get({ key: 'atlas_user_profile' });
-            if (result && result.data) {
-                AppState.userProfile = JSON.parse(result.data);
-            }
-        } else {
-            const stored = localStorage.getItem('atlas_user_profile');
-            if (stored) {
-                AppState.userProfile = JSON.parse(stored);
-            }
+        const stored = localStorage.getItem('atlas_user_profile');
+        if (stored) {
+            AppState.userProfile = JSON.parse(stored);
         }
         
-        // Populate profile form
-        DOM.userName.value = AppState.userProfile.name || AppState.savedAccount.name || '';
-        DOM.userEmail.value = AppState.userProfile.email || AppState.savedAccount.email || '';
+        DOM.userName.value = AppState.userProfile.name || '';
+        DOM.userEmail.value = AppState.userProfile.email || '';
         DOM.userAddress.value = AppState.userProfile.address || '';
-        
-        // Update profile info display
-        updateProfileInfoDisplay();
         
     } catch (error) {
         console.error('Load user data error:', error);
     }
 }
 
-async function saveUserProfileToStore() {
-    try {
-        const profileJson = JSON.stringify(AppState.userProfile);
-        
-        if (AppState.isMedianApp) {
-            await median.storage.app.set({ key: 'atlas_user_profile', value: profileJson });
-        }
-        
-        localStorage.setItem('atlas_user_profile', profileJson);
-    } catch (error) {
-        console.error('Save profile error:', error);
-        localStorage.setItem('atlas_user_profile', JSON.stringify(AppState.userProfile));
-    }
+function saveUserProfile() {
+    localStorage.setItem('atlas_user_profile', JSON.stringify(AppState.userProfile));
 }
 
-function updateProfileInfoDisplay() {
-    if (DOM.profileAddressDisplay) {
-        const address = AppState.userProfile.address;
-        DOM.profileAddressDisplay.textContent = address || 'Not set';
-    }
-}
-
-async function saveUserProfile(e) {
+function handleSaveProfile(e) {
     e.preventDefault();
     
     AppState.userProfile = {
@@ -780,26 +832,20 @@ async function saveUserProfile(e) {
         address: DOM.userAddress.value.trim()
     };
     
-    await saveUserProfileToStore();
-    updateProfileInfoDisplay();
+    saveUserProfile();
     updateGreeting();
     closeProfilePanel();
     showToast('Profile saved successfully');
 }
 
-async function loadActivities() {
+// ============================================
+// Activities (localStorage)
+// ============================================
+
+function loadActivities() {
     try {
-        if (AppState.isMedianApp) {
-            const result = await median.storage.app.get({ key: 'atlas_activities' });
-            if (result && result.data) {
-                AppState.activities = JSON.parse(result.data);
-            } else {
-                AppState.activities = [];
-            }
-        } else {
-            const stored = localStorage.getItem('atlas_activities');
-            AppState.activities = stored ? JSON.parse(stored) : [];
-        }
+        const stored = localStorage.getItem('atlas_activities');
+        AppState.activities = stored ? JSON.parse(stored) : [];
         
         if (AppState.activities.length === 0) {
             addDemoActivities();
@@ -808,8 +854,7 @@ async function loadActivities() {
         renderActivities();
     } catch (error) {
         console.error('Load activities error:', error);
-        const stored = localStorage.getItem('atlas_activities');
-        AppState.activities = stored ? JSON.parse(stored) : [];
+        AppState.activities = [];
         renderActivities();
     }
 }
@@ -819,57 +864,26 @@ function addDemoActivities() {
     AppState.activities = [
         {
             id: generateId(),
-            type: 'system',
-            title: 'System Armed',
-            content: 'Security system activated in Away mode',
-            location: 'Control Panel',
+            type: 'scan',
+            title: 'Product Registered',
+            content: 'Atlas sensor is connected and monitoring',
             createdAt: now - 3600000,
             updatedAt: now - 3600000
-        },
-        {
-            id: generateId(),
-            type: 'door',
-            title: 'Front Door Locked',
-            content: 'Automatic lock engaged after 30 seconds',
-            location: 'Front Entrance',
-            createdAt: now - 7200000,
-            updatedAt: now - 7200000
-        },
-        {
-            id: generateId(),
-            type: 'camera',
-            title: 'Camera Recording Started',
-            content: 'Motion-triggered recording on driveway camera',
-            location: 'Driveway',
-            createdAt: now - 10800000,
-            updatedAt: now - 10800000
         }
     ];
     saveActivities();
 }
 
-async function saveActivities() {
-    try {
-        const activitiesJson = JSON.stringify(AppState.activities);
-        
-        if (AppState.isMedianApp) {
-            await median.storage.app.set({ key: 'atlas_activities', value: activitiesJson });
-        }
-        
-        localStorage.setItem('atlas_activities', activitiesJson);
-    } catch (error) {
-        console.error('Save activities error:', error);
-        localStorage.setItem('atlas_activities', JSON.stringify(AppState.activities));
-    }
+function saveActivities() {
+    localStorage.setItem('atlas_activities', JSON.stringify(AppState.activities));
 }
 
-function logSecurityEvent(type, title, content, location) {
+function logActivity(type, title, content) {
     const activity = {
         id: generateId(),
         type,
         title,
         content,
-        location,
         createdAt: Date.now(),
         updatedAt: Date.now()
     };
@@ -886,7 +900,6 @@ function renderActivities() {
     const count = AppState.activities.length;
     DOM.activityCount.textContent = `${count} event${count !== 1 ? 's' : ''}`;
     
-    // Update activity badge in header
     updateActivityBadge();
     
     if (count === 0) {
@@ -909,7 +922,6 @@ function renderActivities() {
                 <p>${escapeHtml(activity.content)}</p>
                 <div class="activity-meta">
                     <time>${formatDate(activity.updatedAt)}</time>
-                    ${activity.location ? `<span class="location-tag">${escapeHtml(activity.location)}</span>` : ''}
                 </div>
             </div>
         </div>
@@ -926,11 +938,10 @@ function renderActivities() {
 
 function openAddActivityModal() {
     AppState.editingActivityId = null;
-    DOM.modalTitle.textContent = 'Log Security Event';
+    DOM.modalTitle.textContent = 'Log Event';
     DOM.noteId.value = '';
     DOM.eventType.value = 'motion';
     DOM.noteContent.value = '';
-    DOM.noteLocation.value = '';
     DOM.deleteNoteBtn.style.display = 'none';
     DOM.noteModal.classList.add('active');
     DOM.noteContent.focus();
@@ -945,7 +956,6 @@ function openEditActivityModal(activityId) {
     DOM.noteId.value = activity.id;
     DOM.eventType.value = activity.type;
     DOM.noteContent.value = activity.content;
-    DOM.noteLocation.value = activity.location || '';
     DOM.deleteNoteBtn.style.display = 'block';
     DOM.noteModal.classList.add('active');
     DOM.noteContent.focus();
@@ -961,48 +971,44 @@ async function saveActivity(e) {
     
     const type = DOM.eventType.value;
     const content = DOM.noteContent.value.trim();
-    const location = DOM.noteLocation.value.trim();
     
     if (!content) {
-        showToast('Please fill in required fields', 'error');
+        showToast('Please fill in event details', 'error');
         return;
     }
     
-    // Generate title from event type
     const typeLabels = {
         motion: 'Motion Detected',
-        door: 'Door Activity',
-        camera: 'Camera Alert',
-        sensor: 'Sensor Trigger',
+        scan: 'Device Scanned',
         system: 'System Event',
         custom: 'Custom Note'
     };
-    const title = typeLabels[type] || 'Security Event';
+    const title = typeLabels[type] || 'Event';
     
     const now = Date.now();
     
     if (AppState.editingActivityId) {
         const index = AppState.activities.findIndex(a => a.id === AppState.editingActivityId);
         if (index !== -1) {
-            AppState.activities[index] = { ...AppState.activities[index], type, title, content, location, updatedAt: now };
+            AppState.activities[index] = { ...AppState.activities[index], type, title, content, updatedAt: now };
         }
         showToast('Event updated');
     } else {
-        AppState.activities.unshift({ id: generateId(), type, title, content, location, createdAt: now, updatedAt: now });
+        AppState.activities.unshift({ id: generateId(), type, title, content, createdAt: now, updatedAt: now });
         showToast('Event logged');
     }
     
-    await saveActivities();
+    saveActivities();
     renderActivities();
     closeActivityModal();
 }
 
 async function deleteActivity() {
     if (!AppState.editingActivityId) return;
-    if (!confirm('Delete this security event?')) return;
+    if (!confirm('Delete this event?')) return;
     
     AppState.activities = AppState.activities.filter(a => a.id !== AppState.editingActivityId);
-    await saveActivities();
+    saveActivities();
     renderActivities();
     closeActivityModal();
     showToast('Event deleted');
@@ -1013,38 +1019,17 @@ async function deleteActivity() {
 // ============================================
 
 function openProfilePanel() {
-    // Populate form with current profile data
-    DOM.userName.value = AppState.userProfile.name || AppState.savedAccount.name || '';
-    DOM.userEmail.value = AppState.userProfile.email || AppState.savedAccount.email || '';
+    DOM.userName.value = AppState.userProfile.name || '';
+    DOM.userEmail.value = AppState.userProfile.email || '';
     DOM.userAddress.value = AppState.userProfile.address || '';
     
-    // Update profile info display
-    updateProfileInfoDisplay();
+    updateSensorDisplay();
     
     DOM.profilePanel.classList.add('active');
 }
 
 function closeProfilePanel() {
     DOM.profilePanel.classList.remove('active');
-}
-
-// ============================================
-// Quick Actions
-// ============================================
-
-function toggleSystemArm() {
-    AppState.systemArmed = !AppState.systemArmed;
-    const status = AppState.systemArmed ? 'Armed' : 'Disarmed';
-    
-    // Update the main arm button
-    DOM.armBtn.className = `arm-control-btn ${AppState.systemArmed ? 'armed' : 'disarmed'}`;
-    const statusText = DOM.armBtn.querySelector('.arm-status-text');
-    const actionText = DOM.armBtn.querySelector('.arm-action-text');
-    if (statusText) statusText.textContent = AppState.systemArmed ? 'System Armed' : 'System Disarmed';
-    if (actionText) actionText.textContent = AppState.systemArmed ? 'Tap to Disarm' : 'Tap to Arm';
-    
-    logSecurityEvent('system', `System ${status}`, `Security system ${AppState.systemArmed ? 'activated' : 'deactivated'} manually`, 'Control Panel');
-    showToast(`System ${status.toLowerCase()}`);
 }
 
 // ============================================
@@ -1076,17 +1061,17 @@ function updateActivityBadge() {
 // ============================================
 
 function clearAccountAndLogout() {
-    // Clear all stored data
     localStorage.removeItem('atlas_account');
     localStorage.removeItem('atlas_user_profile');
     localStorage.removeItem('atlas_activities');
+    localStorage.removeItem('atlas_motion_sensor');
     
-    // Reset state
     AppState.hasAccount = false;
     AppState.hasBiometrics = false;
-    AppState.savedAccount = { name: '', email: '' };
+    AppState.hasDevice = false;
+    AppState.userProfile = { name: '', email: '', address: '' };
+    AppState.motionSensor = { code: '', name: 'Atlas Sensor', connectedAt: null, status: 'offline' };
     
-    // Show signup
     showSignup();
     showToast('Account cleared');
 }
@@ -1111,15 +1096,21 @@ function initEventListeners() {
     DOM.usePasswordBtn?.addEventListener('click', showSignin);
     DOM.useDifferentAccount?.addEventListener('click', clearAccountAndLogout);
     
+    // Add Device Screen
+    DOM.scanDeviceBtn?.addEventListener('click', scanBarcode);
+    DOM.confirmDeviceBtn?.addEventListener('click', confirmDevice);
+    DOM.skipDeviceBtn?.addEventListener('click', () => {
+        showToast('You can add a device later from the dashboard');
+        unlockApp();
+    });
+    
     // Dashboard
     DOM.lockBtn?.addEventListener('click', lockApp);
     DOM.addNoteBtn?.addEventListener('click', openAddActivityModal);
     DOM.profileBtn?.addEventListener('click', openProfilePanel);
-    
-    // Quick Actions
-    DOM.armBtn?.addEventListener('click', toggleSystemArm);
-    DOM.camerasBtn?.addEventListener('click', () => showToast('Camera view coming soon'));
+    DOM.addDeviceBtn?.addEventListener('click', scanBarcode);
     DOM.historyBtn?.addEventListener('click', openActivityDrawer);
+    DOM.rescanHubBtn?.addEventListener('click', scanBarcode);
     
     // Activity Drawer
     DOM.activityDrawerBtn?.addEventListener('click', openActivityDrawer);
@@ -1133,7 +1124,7 @@ function initEventListeners() {
     
     // Profile Panel
     DOM.closeProfileBtn?.addEventListener('click', closeProfilePanel);
-    DOM.profileForm?.addEventListener('submit', saveUserProfile);
+    DOM.profileForm?.addEventListener('submit', handleSaveProfile);
     
     // Close on backdrop
     DOM.noteModal?.addEventListener('click', (e) => { if (e.target === DOM.noteModal) closeActivityModal(); });

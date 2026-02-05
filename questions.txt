@@ -1,20 +1,47 @@
-Customer profile:
-- Atlas Systems, home security and surveilance company
+1. The app you built and why you chose the website
 
-Website:
+Customer profile:
+- Atlas Systems, webapp for managing a home security system
 - https://atlas-systems.vercel.app/
 
-Project Description:
-A native IOS app built using Median.co to allow users access and monitor their home security system securely.
+Why I chose this site
+- I chose this site because it had a really strong use case for the plugins i want to implementation
+- For a home security monitoring system, Biometric Authentiation and Local Data Store are features that will make the native app more secure and accessible than the web app
+
+How you set up the app in Median App Studio
+- Configured the User Interface/Look of the app in the first four sections. So think of app icon, theme, and accessibility
+- Configured functionality in last four sections
+
+
+The plugin you selected and how it works
+- Biometric auth
+       - How it works?
+              When a user creates an account, their username and password is stored in the app. When they try to login, the app checks if the biometric information is available and if it is the user can use it access the secret that was saved and login to their account
+              The plugin uses the Median JavaScript Bridge to securely store and retrieve the secret.
+       - Why? 
+              Security- Instead of username and password, users use a scan of their Face/Fingerprint 
+              User experience: Login is 85% faster and more secure
+              Median does not store this secret on our end, it stays on the users device
+
+- Barcode code Scanner:
+       - This uses the device's camera to scan the barcode for device activation
+
+       Why?
+       - Better user experience as current setup used a 12 digit code- reduces user error, 3 to 5 times faster onboarding, more accessible for users with visibility issues
+       - Works with existing infrastructure since current products already have barcodes
+
+All plugins use the Median Bridge via the Median Js library to access median.* methods for plugin functionality. 
+- The bridge is an API that the WebApp/Website uses to control the native app. 
+
+Any technical constraints or tradeoffs you encountered
+
+
+What you would improve or add with more time
+- Geo fencing(Background Location PLugin)- Auto activate devices when leaving home
+- Real-time push notifications(OneSignal)- for key events from the system such as 'Motion Detected', 'Alarm Activated' using One signal or Firebase loud messaging
+
 
 How you’d explain this implementation to a customer
-
-Project Requirements:
-- IOS native app that is identical to the web experience
-- Biometric auth →  Users wont need a username/password to login after ceating an account, instead they can the scan of their Face/Fingerprint built into their device for a faster and more secure user experience. Anyone can steal your username and password but itll be very difficult to get a scan of your face.
-- Local datastore → Website currently stores sensitive information such as addresses and user information/PII on its servers. With a native app, this sensitive data is stored on the user's device in the app instead, reducing your server costs and gives users offline access
-- Push notifications for real-time security alerts straight to the users device from their security system
-
 
 Why Native with Median?
 
@@ -34,7 +61,7 @@ Technical Implementation:
 │                     YOUR Website                            │
 │                                                             │
 │   ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    │
-│   │  Sign Up    │    │  Dashboard  │    │  Profile    │    │
+│   │  Sign Up    │───▶│ Add Device  │───▶│  Dashboard  │    │
 │   └──────┬──────┘    └──────┬──────┘    └──────┬──────┘    │
 │          │                  │                  │            │
 │          ▼                  ▼                  ▼            │
@@ -43,80 +70,28 @@ Technical Implementation:
 │   └──────────────────────┬──────────────────────────────┘  │
 └──────────────────────────┼──────────────────────────────────┘
                            │
-           ┌───────────────┼───────────────┐
-           ▼               ▼               ▼
-    ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
-    │ median.auth │ │  median.    │ │  median.    │
-    │ (Biometrics)│ │  datastore  │ │  onesignal  │
-    └──────┬──────┘ └──────┬──────┘ └──────┬──────┘
-           │               │               │
-           ▼               ▼               ▼
-    ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
-    │iOS Keychain │ │Native Device│ │   APNs /    │
-    │  / Android  │ │   Storage   │ │  OneSignal  │
-    │  Keystore   │ │             │ │   Server    │
-    └─────────────┘ └─────────────┘ └─────────────┘
-
-The native app:
-- Uses Median Bridge via the Median Js library to access median.* methods for plugin functionality. 
-- The bridge is an API that the WebApp/Website uses to control the native app. 
-- Alternatively we could use the median protocol to access the bridge but it doesnt fit our usecase and its not the recommended approach:
-- The median protocol is good for simple one way communication on the bridge, not back and forth where responses are needed
-
-
-----Features
-
-Biometric Authentication using Touch ID/FaceID:
-- Median's Face ID / Touch ID plugin uses the Median JavaScript Bridge to securely store and retrieve user credentials.
-- The Median plugin uses the app's private Keychain, which:
-Is isolated to your app
-Requires Face ID/Touch ID to access
-Login credentials visible on user device
-- The plugin communicates between the web page and the native app by opening a specific URL with query parameters. Responses from the native app are returned via a callback function in the JavaScript context.
-- When a user creates an account, a secret(login credentials) is stored in the IOS keychain which can only be accessed through using a biomertic scan of the face or fingerprint
-- The next time the user tries to login to their account, they will have the option to login with face id/touch id
-
-Data store:
-- The Native Datastore Plugin lets us to persist/store key-value data such as user preferences and app settings directly on the user's device or in the cloud via the Median JavaScript Bridge.
-- It supports both App Storage and Cloud Storage
-- For this app we're storing the user's name, address, and activity log in the data store and displaying them in the areas of the dynamic UI
-
-
-
-What you would improve or add with more time?
-- Geo fencing- Auto arm system when leaving home
-- Real-time push notifications for key events from the system such as 'Motion Detected', 'Alarm Activated' using One signal or Firebase loud messaging
-
-
-
+                ┌──────────┴──────────┐
+                ▼                     ▼
+         ┌─────────────┐       ┌─────────────┐
+         │ median.auth │       │   median.   │
+         │ (Biometrics)│       │   barcode   │
+         └──────┬──────┘       └──────┬──────┘
+                │                     │
+                ▼                     ▼
+         ┌─────────────┐       ┌─────────────┐
+         │iOS Keychain │       │   Device    │
+         │  / Android  │       │   Camera    │
+         │  Keystore   │       │  (Scanner)  │
+         └─────────────┘       └─────────────┘
 
 Issues I ran into:
 
-How to determine if a device is using Face or Touch id so i can display the right option in the UI flow?
-- The MJB has a javascript function to check for any biometric authentication thats available median.auth.status({'callbackFunction': CALLBACK});
+Debugging Complexity
+Challenge: Can't debug native plugin behavior such as FaceID and Scanner in browser dev tools, lack of Native app development or X code experience to check for errors
+Tradeoff: Harder to troubleshoot issues compared to pure web development
 
-The app will execute CALLBACK with an object parameter containing the fields:
-
-hasTouchId: true or false. Indicates if the device is running iOS 9+ and there are fingerprints enrolled, or FaceID is enabled.
-biometryType: ‘touchId’, ‘faceId’, or ‘none’. This field is populated on iOS only to differentiate between TouchID and FaceID.
-hasSecret: true or false
-
-
-
-Apple Developer account required for push notification plugin, relies on APN's (Apple Push Notification service) an needs APN key
-
-How it works:
-
-Your app's server sends a notification to Apple's APN servers
-APN routes the notification to the correct user's device
-The device displays the notification to the user
-
-
-Better approach to debugging, i dont have a lot of experience with Native app development or X code so i wasnt sure on how to test in the console log and check for errors
-I had to pish code to build on my ios device to test functionality since I knew what the final product should look like, i'm curious to see what tools and process you use in your workflow
-It was interesting stepping outside of my comfort zone while also being resourceful and using my existing knowledge on building on the web
-
-
-Tradeoff: Device Testing vs. Simulator
-I deployed to a physical iOS device rather than relying solely on the simulator because biometric authentication requires actual hardware. 
-This added setup time but ensured the demo would be realistic.
+How I handled it:
+- Test on actual device (not just simulator)
+- Knowing what the final result should look like
+- I'm curious to see what tools and process you use in your workflow
+- It was interesting stepping outside of my comfort zone while also being resourceful and using my existing knowledge on building on the web
