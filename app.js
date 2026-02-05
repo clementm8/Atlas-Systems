@@ -64,7 +64,6 @@ const DOM = {
     signupContainer: document.getElementById('signup-container'),
     signinContainer: document.getElementById('signin-container'),
     biometricUnlockContainer: document.getElementById('biometric-unlock-container'),
-    browserFallback: document.getElementById('browser-fallback'),
     
     // Sign Up Form
     signupForm: document.getElementById('signup-form'),
@@ -397,8 +396,6 @@ function checkMedianEnvironment() {
     if (AppState.isMedianApp) {
         initBiometrics();
     } else {
-        // Browser fallback
-        DOM.browserFallback.style.display = 'block';
         determineAuthScreen();
     }
 }
@@ -657,7 +654,7 @@ async function handleSignin(e) {
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 800));
     
-    // Demo mode: accept any valid-looking credentials
+    // Accept any valid-looking credentials
     if (email.includes('@') && password.length >= 1) {
         // Update saved account
         if (!AppState.savedAccount.name) {
