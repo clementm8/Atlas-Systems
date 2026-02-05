@@ -1,35 +1,34 @@
 # Atlas Systems - Home Security Management
 
-A smart home security management app demonstrating Median.co's native plugin capabilities: **Biometric Authentication**, **DataStore**, and **Push Notifications**.
+A smart home security management app demonstrating Median.co's native plugin capabilities: **Biometric Authentication** and **QR/Barcode Scanner**.
 
 ## Overview
 
-Atlas Systems is a home security dashboard that showcases how web apps can leverage native device features through Median's JavaScript Bridge. Built for the Median.co Solutions Engineer technical exercise.
+Atlas Systems is a product management dashboard that showcases how web apps can leverage native device features through Median's JavaScript Bridge. Users can scan Atlas product barcodes using their device camera and register them to their account.
 
 ### Plugin Integration
 
 | Plugin | Feature | Use Case |
 |--------|---------|----------|
-| **Biometrics** | Face ID / Touch ID | Secure login to security dashboard |
-| **DataStore** | Encrypted local storage | Store user profile & activity log |
-| **OneSignal** | Push notifications | Real-time security alerts (motion, doors, cameras) |
+| **Biometrics** | Face ID / Touch ID | Secure login to product dashboard |
+| **Barcode Scanner** | Device camera | Scan and register Atlas product barcodes |
 
 ## Features
 
-### Security Dashboard
-- **System Status** — View armed/disarmed state, doors, cameras, sensors
-- **Activity Feed** — Recent security events with timestamps and locations
-- **Quick Actions** — Arm/disarm system, view cameras, access history
+### Product Registration
+- **Barcode Scanning** — Use device camera to scan any Atlas product barcode
+- **Product Display** — Registered products appear as "Atlas Sensor" on dashboard
+- **Offline Support** — All data stored locally using localStorage
 
-### User Profile (DataStore Demo)
+### User Profile
 - Store user name, email, and address
-- Persists across app sessions via Median DataStore
+- Persists across app sessions via localStorage
+- View registered product information
 
-### Security Alerts (Push Demo)
-- Motion detection notifications
-- Door/window activity alerts
-- Camera event notifications
-- System status changes
+### Activity Log
+- Track product registration events
+- Log motion detection and system events
+- View activity history with timestamps
 
 ### Biometric Login
 - Face ID (iOS) / Touch ID support
@@ -64,20 +63,16 @@ npx vercel
 - Navigate to **Native Plugins** → **Biometric Auth**
 - Enable the plugin
 
-#### DataStore
-- Navigate to **Native Plugins** → **DataStore**
+#### QR/Barcode Scanner
+- Navigate to **Native Plugins** → **QR / Barcode Scanner**
 - Enable the plugin
-
-#### Push Notifications (OneSignal)
-- Navigate to **Native Plugins** → **OneSignal**
-- Create app at [onesignal.com](https://onesignal.com)
-- Enter OneSignal App ID
+- Optionally set a custom prompt message
 
 ### 4. Build & Test
 
 1. Click **Build** in Median App Studio
 2. Download dev build to your device
-3. Test biometrics on physical device
+3. Test biometrics and barcode scanning on physical device
 
 ## Project Structure
 
@@ -95,73 +90,48 @@ Median Site/
 ```javascript
 // Check availability
 const status = await median.auth.status();
-// { hasTouchId: bool, hasFaceId: bool, hasSecret: bool }
+// { hasTouchId: bool, hasFaceId: bool, hasSecret: bool, biometryType: 'faceId'|'touchId' }
 
 // Save credential
-await median.auth.save({ secret: 'session-token' });
+await median.auth.save({ secret: JSON.stringify(credentials) });
 
 // Authenticate (triggers biometric prompt)
 const result = await median.auth.get();
 // { success: bool, secret: string }
 ```
 
-### DataStore
+### Barcode Scanner
 ```javascript
-// Save user profile
-await median.datastore.set({
-    key: 'atlas_user_profile',
-    value: JSON.stringify({
-        name: 'John Doe',
-        email: 'john@example.com',
-        address: '123 Main St'
-    })
-});
+// Set custom prompt (optional)
+median.barcode.setPrompt('Align the barcode on your Atlas product within the frame');
 
-// Load user profile
-const result = await median.datastore.get({ key: 'atlas_user_profile' });
-const profile = JSON.parse(result.value);
-```
-
-### Push Notifications
-```javascript
-// Register device
-await median.onesignal.register();
-
-// Get device ID
-const info = await median.onesignal.info();
-// { oneSignalUserId: 'player-id-here' }
-
-// Handle incoming alerts
-median.onesignal.receive = function(data) {
-    // data: { title, body, ... }
-    console.log('Security alert:', data.title);
-};
+// Scan barcode (triggers native camera scanner)
+const result = await median.barcode.scan();
+// { success: bool, code: string, type: string, error: string }
+// Example: { success: true, code: 'ATLAS-ABC123', type: 'qr' }
 ```
 
 ## Technical Decisions
 
-### Why Home Security?
+### Why Product Registration?
 
-Home security is the ideal use case for these three plugins:
+Product registration is an ideal use case for these plugins:
 
-1. **Biometrics** — Users expect and trust biometric authentication for security apps. It's not just convenient; it's essential.
+1. **Biometrics** — Users expect secure authentication for account access. Face ID/Touch ID provides seamless, secure login.
 
-2. **DataStore** — User profiles and activity logs need reliable local persistence. Security data shouldn't depend on network availability.
-
-3. **Push Notifications** — Real-time alerts are the core value proposition. Motion detected at 2 AM? You need to know immediately, even if the app is closed.
+2. **Barcode Scanner** — Native camera access enables instant product registration. Users simply point their camera at any Atlas product barcode to register it.
 
 ### Browser Fallback Strategy
 
 The app gracefully degrades in browsers:
-- **Biometrics** → "Enter Dashboard" button (demo mode)
-- **DataStore** → Falls back to localStorage
-- **Push** → Shows "Requires Median app" message
+- **Biometrics** → Sign in form (demo mode)
+- **Barcode Scanner** → Generates demo barcode code for testing
 
 This enables UI testing without a physical device.
 
 ### Data Model
 
-**User Profile** (stored in DataStore):
+**User Profile** (stored in localStorage):
 ```json
 {
     "name": "string",
@@ -170,61 +140,73 @@ This enables UI testing without a physical device.
 }
 ```
 
-**Activity Event** (stored in DataStore):
+**Registered Product** (stored in localStorage):
+```json
+{
+    "code": "string",
+    "name": "Atlas Sensor",
+    "connectedAt": "timestamp",
+    "status": "online|offline"
+}
+```
+
+**Activity Event** (stored in localStorage):
 ```json
 {
     "id": "string",
-    "type": "motion|door|camera|sensor|system|custom",
+    "type": "motion|scan|system|custom",
     "title": "string",
     "content": "string",
-    "location": "string",
     "createdAt": "timestamp",
     "updatedAt": "timestamp"
 }
 ```
 
+## User Flow
+
+1. **Sign Up** → Create account with name, email, address
+2. **Add Product** → Scan barcode on any Atlas product
+3. **Dashboard** → View registered product and activity log
+4. **Returning Users** → Biometric login or password sign in
+
 ## Debrief Talking Points
 
 ### Why Atlas Systems?
 
-> "I chose a home security app because it creates a compelling narrative for all three plugins. Biometrics for secure access, DataStore for user preferences and event history, and push notifications for real-time security alerts. It's a use case where native features aren't just nice-to-have—they're essential."
+> "I chose a product registration app because it demonstrates practical use of native device capabilities. Biometrics provide secure, convenient authentication, while the barcode scanner enables instant product registration using the device camera. It's a use case where native features create a seamless user experience that wouldn't be possible in a standard web browser."
 
 ### Plugin Selection Rationale
 
 | Plugin | Why It Matters |
 |--------|---------------|
-| **Biometrics** | Security apps demand secure authentication. Passwords aren't enough. |
-| **DataStore** | Activity logs and user info must persist reliably, even offline. |
-| **Push** | Real-time alerts are the entire point of a security app. |
+| **Biometrics** | Secure, convenient authentication without passwords |
+| **Barcode Scanner** | Native camera access enables instant product registration |
 
 ### Technical Tradeoffs
 
-1. **Local-first architecture** — All data stored on device for privacy and offline access. A production app would sync to a backend.
+1. **Local-first architecture** — All data stored on device using localStorage for privacy and offline access. A production app would sync to a backend.
 
-2. **Demo data on first launch** — Pre-populated activity feed shows the UI's potential without requiring real security hardware.
+2. **Any barcode accepted** — The scanner accepts any barcode format (QR, Code128, etc.) and displays it as an "Atlas Sensor" for demo purposes.
 
-3. **Event type categorization** — Structured activity types (motion, door, camera, etc.) enable icon differentiation and potential filtering.
+3. **Offline capability** — All user data and activity logs are stored locally, enabling full functionality without network connectivity.
 
 ### With More Time
 
-- **Camera Integration** — Live feed from IP cameras via native plugin
-- **Geofencing** — Auto-arm when leaving home
-- **HomeKit/Google Home** — Native smart home integrations
-- **Encrypted Backup** — Cloud sync of activity history
-- **Family Access** — Multi-user support with different permission levels
+- **Product Catalog** — Identify product types from barcode and show specific device information
+- **Multiple Products** — Support registering multiple products, not just one
+- **Cloud Sync** — Back up registered products and activity to cloud
+- **Product Management** — Edit product names, locations, and settings
+- **Notifications** — Alert users when products go offline or detect activity
 
 ### Customer Explanation
 
-> "Atlas Systems shows how Median transforms a web dashboard into a native security app. The biometric login gives users confidence their security data is protected. The DataStore keeps their profile and activity history available instantly, even offline. And push notifications mean they'll never miss a security alert—whether it's motion at the front door or a sensor going offline. All of this without writing a single line of Swift or Kotlin."
-
- **Geofencing** — Auto-arm when leaving home
+> "Atlas Systems shows how Median transforms a web dashboard into a native product management app. The biometric login gives users quick, secure access to their account. The barcode scanner uses the device camera to instantly register any Atlas product—just point and scan. All product data is stored locally, so everything works offline. All of this without writing a single line of Swift or Kotlin."
 
 ## Resources
 
 - [Median Documentation](https://docs.median.co)
 - [JavaScript Bridge Reference](https://docs.median.co/docs/javascript-bridge)
 - [Biometric Auth Docs](https://docs.median.co/docs/biometric-authentication)
-- [DataStore Docs](https://docs.median.co/docs/datastore)
-- [OneSignal Setup](https://docs.median.co/docs/onesignal)
+- [QR/Barcode Scanner Docs](https://docs.median.co/docs/qr-barcode-scanner)
 
 ---

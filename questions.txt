@@ -1,12 +1,14 @@
 1. The app you built and why you chose the website
 
 Customer profile:
-- Atlas Systems, webapp for managing a home security system
+- Atlas Systems, webapp for managing a home security products motion sensors, cameras, etc
 - https://atlas-systems.vercel.app/
 
 Why I chose this site
-- I chose this site because it had a really strong use case for the plugins i want to implementation
-- For a home security monitoring system, Biometric Authentiation and Local Data Store are features that will make the native app more secure and accessible than the web app
+- I chose this site because it had a really strong use case for the plugins i want to implement
+- We are improving the login and device registration process using the biometric auth and qrcode scanner plugins
+- The goals are to improve the user experience and accessibility while keeping the current look and feel of the site
+
 
 How you set up the app in Median App Studio
 - Configured the User Interface/Look of the app in the first four sections. So think of app icon, theme, and accessibility
@@ -16,11 +18,11 @@ How you set up the app in Median App Studio
 The plugin you selected and how it works
 - Biometric auth
        - How it works?
-              When a user creates an account, their username and password is stored in the app. When they try to login, the app checks if the biometric information is available and if it is the user can use it access the secret that was saved and login to their account
-              The plugin uses the Median JavaScript Bridge to securely store and retrieve the secret.
+              When a user creates an account or signs in for the first time, their username and password is stored as a secret in the device's encrypted hardware storage. When they try to login, the app checks if the biometric information is available and if it is the user can use it access the secret that was saved and login to their account
+              The plugin uses the Median JavaScript Bridge to securely store and retrieve the secret saved in the encryptes storage.
        - Why? 
+              User experience: Login is at least 85% faster and accessible for users with mobility and visibility issues
               Security- Instead of username and password, users use a scan of their Face/Fingerprint 
-              User experience: Login is 85% faster and more secure
               Median does not store this secret on our end, it stays on the users device
 
 - Barcode code Scanner:
@@ -30,31 +32,7 @@ The plugin you selected and how it works
        - Better user experience as current setup used a 12 digit code- reduces user error, 3 to 5 times faster onboarding, more accessible for users with visibility issues
        - Works with existing infrastructure since current products already have barcodes
 
-All plugins use the Median Bridge via the Median Js library to access median.* methods for plugin functionality. 
-- The bridge is an API that the WebApp/Website uses to control the native app. 
-
-Any technical constraints or tradeoffs you encountered
-
-
-What you would improve or add with more time
-- Geo fencing(Background Location PLugin)- Auto activate devices when leaving home
-- Real-time push notifications(OneSignal)- for key events from the system such as 'Motion Detected', 'Alarm Activated' using One signal or Firebase loud messaging
-
-
-How you’d explain this implementation to a customer
-
-Why Native with Median?
-
-Security and Privacy
-- Your app and user data is not saved on our servers, everything goes straight from your website to the app
-
-Accessibility and User Experience
-- Atlas Systems lives on the users device instead of on a browser, bringing your product closer to your users and giving them faster access to their data online or offline
-- The content in the native app are from the website, so its always up to date and easy to manage, when you update your site, the app updates automatically.
-
-
-
-Technical Implementation:
+I built in graceful fallbacks for both plugins. The app first checks if the device supports biometrics - if not, users see the traditional login form. Same with the barcode scanner - if there's no camera access, the app automatically shows the manual code entry field instead.
 
 
 ┌─────────────────────────────────────────────────────────────┐
@@ -83,6 +61,33 @@ Technical Implementation:
          │  / Android  │       │   Camera    │
          │  Keystore   │       │  (Scanner)  │
          └─────────────┘       └─────────────┘
+
+
+All plugins use the Median Bridge via the Median Js library to access median.* methods for plugin functionality. 
+- The bridge is an API that the WebApp/Website uses to control the native app. 
+
+Any technical constraints or tradeoffs you encountered
+
+
+What you would improve or add with more time
+- Geo fencing(Background Location PLugin)- Auto activate devices when leaving home
+- Real-time push notifications(OneSignal)- for key events from the system such as 'Motion Detected', 'Alarm Activated' using One signal or Firebase loud messaging
+- Use more of the design and accessibility features n the median app studio e.g design an offline page, localization, and page transitions
+
+
+How you’d explain this implementation to a customer? 
+
+This app displays the content that is on your website, but uses our platform to access native features on the user's device, specifically biometric authentication and barcode scanning.
+The biometric authentication allows users to login with a scan of their face or fingerprint, reducing any friction and making the login process much faster and secure
+The barcode scanner uses the devices camera to scan and activate Atlas products, 85% faster than the current process of entering a 12 digit code
+
+Both of these features are built into your current flow, keeping the user experience identical. The option for biometric authentication and barcode scanner only appear if their device supports it, otherwise users will be presented with the current flow of username/password and entering device code for activation.
+
+
+- No app and user data is saved on our servers, everything goes straight from your website to the app
+- Atlas Systems lives on the users home screen instead of on a browser, bringing your product closer to your users and giving them faster access to their data
+- The content in the native app are from the website, so its always up to date and easy to manage, when you update your site, the app updates automatically.
+
 
 Issues I ran into:
 

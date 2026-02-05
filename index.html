@@ -216,16 +216,33 @@
                 </svg>
             </div>
             
-            <button id="scan-device-btn" class="primary-button full-width scan-button">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M3 7V5a2 2 0 0 1 2-2h2"/>
-                    <path d="M17 3h2a2 2 0 0 1 2 2v2"/>
-                    <path d="M21 17v2a2 2 0 0 1-2 2h-2"/>
-                    <path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
-                    <line x1="7" y1="12" x2="17" y2="12"/>
-                </svg>
-                Scan Barcode
-            </button>
+            <div class="scan-options">
+                <button id="scan-device-btn" class="primary-button full-width scan-button">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 7V5a2 2 0 0 1 2-2h2"/>
+                        <path d="M17 3h2a2 2 0 0 1 2 2v2"/>
+                        <path d="M21 17v2a2 2 0 0 1-2 2h-2"/>
+                        <path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
+                        <line x1="7" y1="12" x2="17" y2="12"/>
+                    </svg>
+                    Scan Barcode
+                </button>
+                
+                <div class="scan-divider">
+                    <span>or</span>
+                </div>
+                
+                <div class="manual-entry-container" id="manual-entry-container">
+                    <input type="text" id="manual-name-input" class="manual-code-input" placeholder="Product name (e.g., Living Room Sensor)" />
+                    <input type="text" id="manual-code-input" class="manual-code-input" placeholder="Product code" />
+                    <button id="submit-manual-code-btn" class="primary-button full-width">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                        Register Product
+                    </button>
+                </div>
+            </div>
             
             <p id="scan-status" class="status-text"></p>
             
@@ -243,7 +260,7 @@
                         </svg>
                     </div>
                     <div class="device-preview-info">
-                        <span class="device-preview-name">Atlas Sensor</span>
+                        <input type="text" id="device-name-input" class="device-name-input" placeholder="Enter product name" />
                         <code id="device-code" class="device-preview-code">---</code>
                     </div>
                     <div class="device-preview-status">
@@ -305,39 +322,18 @@
         </header>
 
         <main class="vault-content">
-            <!-- Registered Sensor Card -->
-            <div class="hub-card sensor-card">
-                <div class="hub-header">
-                    <div class="hub-icon-container">
-                        <div class="hub-icon sensor-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                                <circle cx="12" cy="10" r="6"/>
-                                <circle cx="12" cy="10" r="2"/>
-                                <path d="M5 10 Q2 8 5 5" opacity="0.6"/>
-                                <path d="M19 10 Q22 8 19 5" opacity="0.6"/>
-                                <rect x="8" y="18" width="8" height="3" rx="1"/>
-                                <line x1="12" y1="16" x2="12" y2="18"/>
-                            </svg>
-                        </div>
-                        <div class="hub-pulse"></div>
-                    </div>
-                    <div class="hub-info">
-                        <h2 id="hub-name">Atlas Sensor</h2>
-                        <code id="hub-code" class="hub-device-code">No product registered</code>
-                    </div>
-                </div>
-                <div class="hub-status">
-                    <div class="hub-status-indicator" id="hub-status-indicator">
-                        <span class="status-dot" id="hub-status-dot"></span>
-                        <span id="hub-status-text">Offline</span>
-                    </div>
+            <!-- Products Container -->
+            <div id="products-container" class="products-container">
+                <div class="no-products-message">
+                    <p>No products registered</p>
+                    <span>Add a product to get started</span>
                 </div>
             </div>
 
             <!-- Quick Actions -->
             <div class="quick-actions two-col">
                 <button class="action-btn" id="add-device-btn">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <svg id="add-device-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                         <path d="M3 7V5a2 2 0 0 1 2-2h2"/>
                         <path d="M17 3h2a2 2 0 0 1 2 2v2"/>
                         <path d="M21 17v2a2 2 0 0 1-2 2h-2"/>
@@ -345,7 +341,7 @@
                         <line x1="12" y1="8" x2="12" y2="16"/>
                         <line x1="8" y1="12" x2="16" y2="12"/>
                     </svg>
-                    <span>Scan Product</span>
+                    <span id="add-device-text">Add Product</span>
                 </button>
                 <button class="action-btn" id="history-btn">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -430,6 +426,36 @@
         </div>
     </div>
 
+    <!-- Add Product Modal (for manual entry) -->
+    <div id="add-product-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add Product</h2>
+                <button id="close-add-product-btn" class="icon-button">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-description">Enter your Atlas product details</p>
+                <div class="form-group">
+                    <label for="dashboard-product-name">Product Name</label>
+                    <input type="text" id="dashboard-product-name" class="manual-code-input" placeholder="e.g., Living Room Sensor" />
+                </div>
+                <div class="form-group">
+                    <label for="dashboard-product-code">Product Code</label>
+                    <input type="text" id="dashboard-product-code" class="manual-code-input" placeholder="e.g., ATLAS-ABC123" />
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" id="cancel-add-product-btn" class="secondary-button">Cancel</button>
+                <button type="button" id="submit-product-code-btn" class="primary-button">Add Product</button>
+            </div>
+        </div>
+    </div>
+
     <!-- User Profile Panel -->
     <div id="profile-panel" class="panel">
         <div class="panel-header">
@@ -472,8 +498,6 @@
         </div>
     </div>
 
-    <!-- Toast Notifications -->
-    <div id="toast-container" class="toast-container"></div>
 
     <script src="app.js"></script>
 </body>

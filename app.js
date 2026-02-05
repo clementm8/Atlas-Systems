@@ -34,13 +34,11 @@ const AppState = {
         address: ''
     },
     
-    // Registered Atlas product (displayed as sensor)
-    motionSensor: {
-        code: '',
-        name: 'Atlas Sensor',
-        connectedAt: null,
-        status: 'offline'
-    },
+    // Registered Atlas products
+    products: [],
+    
+    // Pending product (during scan/add flow)
+    pendingProduct: null,
     
     // Activity log
     activities: [],
@@ -107,15 +105,17 @@ const DOM = {
     deviceCode: document.getElementById('device-code'),
     confirmDeviceBtn: document.getElementById('confirm-device-btn'),
     skipDeviceBtn: document.getElementById('skip-device-btn'),
+    manualEntryContainer: document.getElementById('manual-entry-container'),
+    manualNameInput: document.getElementById('manual-name-input'),
+    manualCodeInput: document.getElementById('manual-code-input'),
+    submitManualCodeBtn: document.getElementById('submit-manual-code-btn'),
+    deviceNameInput: document.getElementById('device-name-input'),
     
     // Dashboard
     userGreeting: document.getElementById('user-greeting'),
-    hubName: document.getElementById('hub-name'),
-    hubCode: document.getElementById('hub-code'),
-    hubStatusIndicator: document.getElementById('hub-status-indicator'),
-    hubStatusDot: document.getElementById('hub-status-dot'),
-    hubStatusText: document.getElementById('hub-status-text'),
+    productsContainer: document.getElementById('products-container'),
     addDeviceBtn: document.getElementById('add-device-btn'),
+    addDeviceText: document.getElementById('add-device-text'),
     historyBtn: document.getElementById('history-btn'),
     activityList: document.getElementById('activity-list'),
     emptyState: document.getElementById('empty-state'),
@@ -141,6 +141,14 @@ const DOM = {
     closeModalBtn: document.getElementById('close-modal-btn'),
     deleteNoteBtn: document.getElementById('delete-note-btn'),
     
+    // Add Product Modal
+    addProductModal: document.getElementById('add-product-modal'),
+    closeAddProductBtn: document.getElementById('close-add-product-btn'),
+    cancelAddProductBtn: document.getElementById('cancel-add-product-btn'),
+    dashboardProductName: document.getElementById('dashboard-product-name'),
+    dashboardProductCode: document.getElementById('dashboard-product-code'),
+    submitProductCodeBtn: document.getElementById('submit-product-code-btn'),
+    
     // Profile Panel
     profilePanel: document.getElementById('profile-panel'),
     closeProfileBtn: document.getElementById('close-profile-btn'),
@@ -151,8 +159,6 @@ const DOM = {
     profileHubCode: document.getElementById('profile-hub-code'),
     profileHubStatus: document.getElementById('profile-hub-status'),
     
-    // Toast
-    toastContainer: document.getElementById('toast-container')
 };
 
 // ============================================
@@ -188,14 +194,6 @@ const ActivityIcons = {
 // ============================================
 // Utility Functions
 // ============================================
-
-function showToast(message, type = 'success') {
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    toast.innerHTML = `<p>${message}</p>`;
-    DOM.toastContainer.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
-}
 
 function formatDate(timestamp) {
     const date = new Date(timestamp);
@@ -341,9 +339,27 @@ function unlockApp() {
     loadActivities();
     updateGreeting();
     updateSensorDisplay();
+    updateAddDeviceButton();
+}
+
+function updateAddDeviceButton() {
+    if (DOM.addDeviceText) {
+        DOM.addDeviceText.textContent = AppState.isMedianApp ? 'Scan Product' : 'Add Product';
+    }
 }
 
 function showAddDeviceScreen() {
+    // Reset form fields
+    if (DOM.manualNameInput) DOM.manualNameInput.value = '';
+    if (DOM.manualCodeInput) DOM.manualCodeInput.value = '';
+    if (DOM.deviceNameInput) DOM.deviceNameInput.value = '';
+    if (DOM.scanStatus) {
+        DOM.scanStatus.textContent = '';
+        DOM.scanStatus.className = 'status-text';
+    }
+    if (DOM.scannedDevicePreview) DOM.scannedDevicePreview.style.display = 'none';
+    if (DOM.manualEntryContainer) DOM.manualEntryContainer.style.display = 'flex';
+    
     showScreen('add-device-screen');
 }
 
@@ -359,34 +375,80 @@ function updateGreeting() {
 }
 
 // ============================================
-// Sensor Display
+// Products Display
 // ============================================
 
-function updateSensorDisplay() {
-    if (AppState.motionSensor.code) {
-        DOM.hubCode.textContent = AppState.motionSensor.code;
-        DOM.hubStatusDot.classList.add('active');
-        DOM.hubStatusText.textContent = 'Online';
-        AppState.motionSensor.status = 'online';
-        
-        if (DOM.profileHubCode) {
-            DOM.profileHubCode.textContent = AppState.motionSensor.code;
-        }
-        if (DOM.profileHubStatus) {
-            DOM.profileHubStatus.textContent = 'Online';
-        }
-    } else {
-        DOM.hubCode.textContent = 'No product registered';
-        DOM.hubStatusDot.classList.remove('active');
-        DOM.hubStatusText.textContent = 'Offline';
-        
-        if (DOM.profileHubCode) {
-            DOM.profileHubCode.textContent = 'Not registered';
-        }
-        if (DOM.profileHubStatus) {
-            DOM.profileHubStatus.textContent = 'Offline';
-        }
+function updateProductsDisplay() {
+    const container = DOM.productsContainer;
+    if (!container) return;
+    
+    if (AppState.products.length === 0) {
+        container.innerHTML = `
+            <div class="no-products-message">
+                <p>No products registered</p>
+                <span>Add a product to get started</span>
+            </div>
+        `;
+        return;
     }
+    
+    container.innerHTML = AppState.products.map(product => {
+        const isOnline = product.status === 'online';
+        return `
+            <div class="product-card" data-product-id="${product.id}">
+                <div class="product-header">
+                    <div class="product-icon-container">
+                        <div class="product-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <circle cx="12" cy="10" r="6"/>
+                                <circle cx="12" cy="10" r="2"/>
+                                <path d="M5 10 Q2 8 5 5" opacity="0.6"/>
+                                <path d="M19 10 Q22 8 19 5" opacity="0.6"/>
+                                <rect x="8" y="18" width="8" height="3" rx="1"/>
+                                <line x1="12" y1="16" x2="12" y2="18"/>
+                            </svg>
+                        </div>
+                        ${isOnline ? '<div class="product-pulse"></div>' : ''}
+                    </div>
+                    <div class="product-info">
+                        <h3>${product.name}</h3>
+                        <code class="product-code">${product.code}</code>
+                    </div>
+                </div>
+                <div class="product-status">
+                    <div class="product-status-indicator">
+                        <span class="status-dot ${isOnline ? 'active' : ''}"></span>
+                        <span>${isOnline ? 'Online' : 'Offline'}</span>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" class="product-toggle" data-product-id="${product.id}" ${isOnline ? 'checked' : ''} />
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    // Add toggle event listeners
+    container.querySelectorAll('.product-toggle').forEach(toggle => {
+        toggle.addEventListener('change', (e) => {
+            toggleProductStatus(e.target.dataset.productId);
+        });
+    });
+    
+    // Update profile panel products count
+    if (DOM.profileHubCode) {
+        DOM.profileHubCode.textContent = `${AppState.products.length} product${AppState.products.length !== 1 ? 's' : ''}`;
+    }
+    if (DOM.profileHubStatus) {
+        const onlineCount = AppState.products.filter(p => p.status === 'online').length;
+        DOM.profileHubStatus.textContent = `${onlineCount} online`;
+    }
+}
+
+// Legacy function name for compatibility
+function updateSensorDisplay() {
+    updateProductsDisplay();
 }
 
 // ============================================
@@ -404,10 +466,14 @@ function determineAuthScreen() {
         AppState.userProfile = JSON.parse(savedProfile);
     }
     
-    const savedDevice = localStorage.getItem('atlas_motion_sensor');
-    if (savedDevice) {
-        AppState.motionSensor = JSON.parse(savedDevice);
-        AppState.hasDevice = true;
+    const savedProducts = localStorage.getItem('atlas_products');
+    if (savedProducts) {
+        AppState.products = JSON.parse(savedProducts);
+        // Ensure status defaults to offline for each product
+        AppState.products.forEach(p => {
+            if (!p.status) p.status = 'offline';
+        });
+        AppState.hasDevice = AppState.products.length > 0;
     }
     
     if (AppState.hasBiometrics && AppState.hasAccount) {
@@ -511,7 +577,6 @@ async function authenticateWithBiometrics() {
             
             setTimeout(() => {
                 unlockApp();
-                showToast('Welcome to Atlas Systems');
             }, 300);
         } else {
             DOM.biometricStatus.textContent = 'Authentication failed. Try again.';
@@ -560,8 +625,41 @@ async function saveCredentialsWithBiometrics(name, email, password) {
 // Barcode Scanner
 // ============================================
 
+async function checkCameraAvailability() {
+    if (!AppState.isMedianApp) {
+        // In browser, check if getUserMedia is available
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                stream.getTracks().forEach(track => track.stop()); // Stop the stream
+                return true;
+            } catch (error) {
+                console.log('Camera not available:', error);
+                return false;
+            }
+        }
+        return false;
+    }
+    
+    // In Median app, assume camera is available (plugin handles it)
+    // If camera fails, the scan will return an error
+    return true;
+}
+
 async function scanBarcode() {
     if (!AppState.isMedianApp) {
+        // Check camera availability in browser
+        const hasCamera = await checkCameraAvailability();
+        
+        if (!hasCamera) {
+            DOM.scanStatus.textContent = 'Camera not available. Use manual entry below.';
+            DOM.scanStatus.className = 'status-text error';
+            if (DOM.manualEntryContainer) {
+                DOM.manualEntryContainer.style.display = 'block';
+            }
+            return;
+        }
+        
         // Demo mode - simulate a scan
         const demoCode = 'ATLAS-' + Math.random().toString(36).substring(2, 10).toUpperCase();
         handleScanResult({ success: true, code: demoCode, type: 'qr' });
@@ -578,27 +676,61 @@ async function scanBarcode() {
         handleScanResult(result);
     } catch (error) {
         console.error('Scan error:', error);
-        DOM.scanStatus.textContent = 'Scan failed. Please try again.';
+        DOM.scanStatus.textContent = 'Scan failed. Camera may be unavailable. Use manual entry below.';
         DOM.scanStatus.className = 'status-text error';
+        
+        // Show manual entry option on error
+        if (DOM.manualEntryContainer) {
+            DOM.manualEntryContainer.style.display = 'block';
+        }
     }
+}
+
+function handleManualEntry() {
+    const name = DOM.manualNameInput?.value.trim();
+    const code = DOM.manualCodeInput?.value.trim();
+    
+    if (!code) {
+        DOM.scanStatus.textContent = 'Please enter a product code';
+        DOM.scanStatus.className = 'status-text error';
+        return;
+    }
+    
+    // Process manual entry the same way as scanned code
+    handleScanResult({ success: true, code: code, name: name, type: 'manual' });
+    DOM.manualNameInput.value = '';
+    DOM.manualCodeInput.value = '';
 }
 
 function handleScanResult(data) {
     if (data.success && data.code) {
-        // Store the scanned code
-        AppState.motionSensor.code = data.code;
-        AppState.motionSensor.connectedAt = Date.now();
-        AppState.motionSensor.status = 'online';
-        AppState.hasDevice = true;
+        // Store pending product for confirmation (name will be set on confirm)
+        AppState.pendingProduct = {
+            id: generateId(),
+            code: data.code,
+            name: data.name || '',
+            connectedAt: Date.now(),
+            status: 'offline'
+        };
         
-        // Show the preview
+        // Hide manual entry when code is found
+        if (DOM.manualEntryContainer) {
+            DOM.manualEntryContainer.style.display = 'none';
+        }
+        
+        // Show the preview with editable name
         DOM.deviceCode.textContent = data.code;
+        if (DOM.deviceNameInput) {
+            DOM.deviceNameInput.value = data.name || '';
+            DOM.deviceNameInput.focus();
+        }
         DOM.scannedDevicePreview.style.display = 'block';
-        DOM.scanStatus.textContent = 'Device found!';
+        DOM.scanStatus.textContent = data.type === 'manual' ? 'Code entered!' : 'Device found!';
         DOM.scanStatus.className = 'status-text success';
         
-        // Log the scan
-        logActivity('scan', 'Device Scanned', `Scanned device code: ${data.code}`);
+        // Log the entry
+        const logType = data.type === 'manual' ? 'Device Entered' : 'Device Scanned';
+        logActivity('scan', logType, `${data.type === 'manual' ? 'Entered' : 'Scanned'} device code: ${data.code}`);
     } else {
         DOM.scanStatus.textContent = data.error || 'No barcode detected. Try again.';
         DOM.scanStatus.className = 'status-text error';
@@ -606,18 +738,30 @@ function handleScanResult(data) {
 }
 
 function confirmDevice() {
-    // Save the device
-    saveMotionSensor();
+    if (!AppState.pendingProduct) return;
+    
+    // Get name from input field
+    const name = DOM.deviceNameInput?.value.trim() || 'Atlas Product';
+    AppState.pendingProduct.name = name;
+    
+    // Add to products array
+    AppState.products.push(AppState.pendingProduct);
+    AppState.hasDevice = true;
+    
+    // Save all products
+    saveProducts();
     
     // Log the connection
-    logActivity('scan', 'Product Registered', `Atlas product registered: ${AppState.motionSensor.code}`);
+    logActivity('scan', 'Product Registered', `${name} registered: ${AppState.pendingProduct.code}`);
     
-    showToast('Product registered successfully!');
+    // Clear pending
+    AppState.pendingProduct = null;
+    
     unlockApp();
 }
 
-function saveMotionSensor() {
-    localStorage.setItem('atlas_motion_sensor', JSON.stringify(AppState.motionSensor));
+function saveProducts() {
+    localStorage.setItem('atlas_products', JSON.stringify(AppState.products));
 }
 
 // ============================================
@@ -667,12 +811,7 @@ async function handleSignup(e) {
             Setting up ${AppState.biometricType === 'faceId' ? 'Face ID' : 'Touch ID'}...
         `;
         
-        const saved = await saveCredentialsWithBiometrics(name, email, password);
-        if (saved) {
-            showToast(`Account secured with ${AppState.biometricType === 'faceId' ? 'Face ID' : 'Touch ID'}`);
-        } else {
-            showToast('Biometric setup skipped', 'warning');
-        }
+        await saveCredentialsWithBiometrics(name, email, password);
     }
     
     // Save account
@@ -703,7 +842,6 @@ async function handleSignup(e) {
     `;
     
     // Go to Add Device screen
-    showToast('Account created! Now scan your Atlas product.');
     showAddDeviceScreen();
 }
 
@@ -744,23 +882,14 @@ async function handleSignin(e) {
         localStorage.setItem('atlas_account', JSON.stringify(accountData));
         
         if (rememberWithBiometric && AppState.biometricAvailable && AppState.isMedianApp) {
-            const saved = await saveCredentialsWithBiometrics(AppState.userProfile.name, email, password);
-            if (saved) {
-                showToast(`Login saved with ${AppState.biometricType === 'faceId' ? 'Face ID' : 'Touch ID'}`);
-            }
+            await saveCredentialsWithBiometrics(AppState.userProfile.name, email, password);
         }
         
         logActivity('system', 'Password Login', 'User authenticated with email/password');
         
         DOM.loginForm.reset();
         
-        // Check if device exists, if not go to add device
-        if (!AppState.hasDevice) {
-            showAddDeviceScreen();
-        } else {
-            unlockApp();
-        }
-        showToast('Welcome back!');
+        unlockApp();
     } else {
         DOM.loginStatus.textContent = 'Invalid email or password';
         DOM.loginStatus.className = 'status-text error';
@@ -834,7 +963,6 @@ function handleSaveProfile(e) {
     saveUserProfile();
     updateGreeting();
     closeProfilePanel();
-    showToast('Profile saved successfully');
 }
 
 // ============================================
@@ -972,7 +1100,6 @@ async function saveActivity(e) {
     const content = DOM.noteContent.value.trim();
     
     if (!content) {
-        showToast('Please fill in event details', 'error');
         return;
     }
     
@@ -991,10 +1118,8 @@ async function saveActivity(e) {
         if (index !== -1) {
             AppState.activities[index] = { ...AppState.activities[index], type, title, content, updatedAt: now };
         }
-        showToast('Event updated');
     } else {
         AppState.activities.unshift({ id: generateId(), type, title, content, createdAt: now, updatedAt: now });
-        showToast('Event logged');
     }
     
     saveActivities();
@@ -1010,7 +1135,80 @@ async function deleteActivity() {
     saveActivities();
     renderActivities();
     closeActivityModal();
-    showToast('Event deleted');
+}
+
+// ============================================
+// Product Toggle
+// ============================================
+
+function toggleProductStatus(productId) {
+    const product = AppState.products.find(p => p.id === productId);
+    if (!product) return;
+    
+    // Toggle between online and offline
+    product.status = product.status === 'online' ? 'offline' : 'online';
+    saveProducts();
+    updateProductsDisplay();
+    
+    const status = product.status;
+    logActivity('system', `Product ${status.charAt(0).toUpperCase() + status.slice(1)}`, 
+        `${product.name} ${status}: ${product.code}`);
+}
+
+// ============================================
+// Add Product Modal (Dashboard)
+// ============================================
+
+function handleAddDeviceClick() {
+    if (AppState.isMedianApp) {
+        // In Median app, use barcode scanner
+        scanBarcode();
+    } else {
+        // In browser, open manual entry modal
+        openAddProductModal();
+    }
+}
+
+function openAddProductModal() {
+    if (DOM.dashboardProductName) {
+        DOM.dashboardProductName.value = '';
+    }
+    if (DOM.dashboardProductCode) {
+        DOM.dashboardProductCode.value = '';
+    }
+    DOM.addProductModal?.classList.add('active');
+    DOM.dashboardProductName?.focus();
+}
+
+function closeAddProductModal() {
+    DOM.addProductModal?.classList.remove('active');
+}
+
+function submitDashboardProductCode() {
+    const name = DOM.dashboardProductName?.value.trim() || 'Atlas Product';
+    const code = DOM.dashboardProductCode?.value.trim();
+    
+    if (!code) {
+        return;
+    }
+    
+    // Create new product and add to array
+    const newProduct = {
+        id: generateId(),
+        code: code,
+        name: name,
+        connectedAt: Date.now(),
+        status: 'offline'
+    };
+    
+    AppState.products.push(newProduct);
+    AppState.hasDevice = true;
+    
+    saveProducts();
+    updateProductsDisplay();
+    closeAddProductModal();
+    
+    logActivity('scan', 'Product Added', `${name} registered: ${code}`);
 }
 
 // ============================================
@@ -1063,16 +1261,15 @@ function clearAccountAndLogout() {
     localStorage.removeItem('atlas_account');
     localStorage.removeItem('atlas_user_profile');
     localStorage.removeItem('atlas_activities');
-    localStorage.removeItem('atlas_motion_sensor');
+    localStorage.removeItem('atlas_products');
     
     AppState.hasAccount = false;
     AppState.hasBiometrics = false;
     AppState.hasDevice = false;
     AppState.userProfile = { name: '', email: '', address: '' };
-    AppState.motionSensor = { code: '', name: 'Atlas Sensor', connectedAt: null, status: 'offline' };
+    AppState.products = [];
     
     showSignup();
-    showToast('Account cleared');
 }
 
 // ============================================
@@ -1098,8 +1295,13 @@ function initEventListeners() {
     // Add Device Screen
     DOM.scanDeviceBtn?.addEventListener('click', scanBarcode);
     DOM.confirmDeviceBtn?.addEventListener('click', confirmDevice);
+    DOM.submitManualCodeBtn?.addEventListener('click', handleManualEntry);
+    DOM.manualCodeInput?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            handleManualEntry();
+        }
+    });
     DOM.skipDeviceBtn?.addEventListener('click', () => {
-        showToast('You can add a device later from the dashboard');
         unlockApp();
     });
     
@@ -1107,7 +1309,7 @@ function initEventListeners() {
     DOM.lockBtn?.addEventListener('click', lockApp);
     DOM.addNoteBtn?.addEventListener('click', openAddActivityModal);
     DOM.profileBtn?.addEventListener('click', openProfilePanel);
-    DOM.addDeviceBtn?.addEventListener('click', scanBarcode);
+    DOM.addDeviceBtn?.addEventListener('click', handleAddDeviceClick);
     DOM.historyBtn?.addEventListener('click', openActivityDrawer);
     
     // Activity Drawer
@@ -1124,15 +1326,27 @@ function initEventListeners() {
     DOM.closeProfileBtn?.addEventListener('click', closeProfilePanel);
     DOM.profileForm?.addEventListener('submit', handleSaveProfile);
     
+    // Add Product Modal
+    DOM.closeAddProductBtn?.addEventListener('click', closeAddProductModal);
+    DOM.cancelAddProductBtn?.addEventListener('click', closeAddProductModal);
+    DOM.submitProductCodeBtn?.addEventListener('click', submitDashboardProductCode);
+    DOM.dashboardProductCode?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            submitDashboardProductCode();
+        }
+    });
+    
     // Close on backdrop
     DOM.noteModal?.addEventListener('click', (e) => { if (e.target === DOM.noteModal) closeActivityModal(); });
     DOM.profilePanel?.addEventListener('click', (e) => { if (e.target === DOM.profilePanel) closeProfilePanel(); });
+    DOM.addProductModal?.addEventListener('click', (e) => { if (e.target === DOM.addProductModal) closeAddProductModal(); });
     
     // Escape key
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             if (DOM.noteModal?.classList.contains('active')) closeActivityModal();
             if (DOM.profilePanel?.classList.contains('active')) closeProfilePanel();
+            if (DOM.addProductModal?.classList.contains('active')) closeAddProductModal();
         }
     });
 }

@@ -1316,6 +1316,13 @@ body {
     color: var(--text-muted);
 }
 
+.modal-description {
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    margin-bottom: var(--space-4);
+    text-align: center;
+}
+
 .modal-actions {
     display: flex;
     gap: var(--space-3);
@@ -1332,6 +1339,28 @@ body {
     gap: var(--space-3);
     padding: var(--space-5);
     border-top: 1px solid var(--border);
+}
+
+.secondary-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-family: inherit;
+    font-size: var(--text-sm);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--duration-fast);
+}
+
+.secondary-button:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
 }
 
 .danger-button {
@@ -1439,56 +1468,6 @@ body {
 }
 
 /* ============================================
-   TOAST
-   ============================================ */
-
-.toast-container {
-    position: fixed;
-    bottom: var(--space-6);
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 1000;
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-    pointer-events: none;
-}
-
-.toast {
-    padding: var(--space-3) var(--space-5);
-    background: var(--bg-elevated);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    font-size: var(--text-sm);
-    color: var(--text-primary);
-    pointer-events: auto;
-    animation: toastIn var(--duration-normal) var(--ease-out);
-}
-
-@keyframes toastIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.toast.success {
-    border-color: var(--success);
-}
-
-.toast.error {
-    border-color: var(--error);
-}
-
-.toast.warning {
-    border-color: var(--warning);
-}
-
-/* ============================================
    UTILITIES
    ============================================ */
 
@@ -1561,6 +1540,65 @@ body {
     height: 20px;
 }
 
+/* Scan Options Container */
+.scan-options {
+    width: 100%;
+    max-width: 280px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+.scan-divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    margin: var(--space-2) 0;
+}
+
+.scan-divider::before,
+.scan-divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid var(--border);
+}
+
+.scan-divider span {
+    padding: 0 var(--space-3);
+}
+
+/* Manual Entry */
+.manual-entry-container {
+    display: flex;
+    width: 100%;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.manual-code-input {
+    width: 100%;
+    padding: var(--space-3) var(--space-4);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-size: var(--text-base);
+    font-family: var(--font-mono);
+    text-align: center;
+    transition: border-color var(--duration-fast);
+}
+
+.manual-code-input:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.manual-code-input::placeholder {
+    color: var(--text-muted);
+}
+
 /* Scanned Device Preview */
 .scanned-device-preview {
     width: 100%;
@@ -1617,6 +1655,29 @@ body {
     font-weight: 500;
     font-size: var(--text-sm);
     margin-bottom: var(--space-1);
+}
+
+.device-name-input {
+    display: block;
+    width: 100%;
+    padding: var(--space-2);
+    font-size: var(--text-sm);
+    font-weight: 500;
+    background: var(--bg-base);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    margin-bottom: var(--space-2);
+}
+
+.device-name-input:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.device-name-input::placeholder {
+    color: var(--text-muted);
+    font-weight: 400;
 }
 
 .device-preview-code {
@@ -1775,6 +1836,138 @@ body {
     box-shadow: 0 0 8px var(--success);
 }
 
+/* ============================================
+   PRODUCTS CONTAINER
+   ============================================ */
+
+.products-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
+}
+
+.no-products-message {
+    background: var(--bg-elevated);
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+    text-align: center;
+}
+
+.no-products-message p {
+    font-size: var(--text-base);
+    color: var(--text-secondary);
+    margin-bottom: var(--space-1);
+}
+
+.no-products-message span {
+    font-size: var(--text-sm);
+    color: var(--text-muted);
+}
+
+.product-card {
+    background: linear-gradient(135deg, var(--bg-elevated), var(--bg-surface));
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+}
+
+.product-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.product-icon-container {
+    position: relative;
+    width: 44px;
+    height: 44px;
+}
+
+.product-icon {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent-muted);
+    border-radius: var(--radius-md);
+    color: var(--accent);
+    position: relative;
+    z-index: 1;
+}
+
+.product-icon svg {
+    width: 22px;
+    height: 22px;
+}
+
+.product-pulse {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: var(--radius-md);
+    background: var(--accent-muted);
+    animation: hubPulse 2s ease-out infinite;
+}
+
+.product-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.product-info h3 {
+    font-size: var(--text-base);
+    font-weight: 600;
+    margin-bottom: var(--space-1);
+}
+
+.product-code {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--text-secondary);
+    background: var(--bg-base);
+    padding: 2px var(--space-2);
+    border-radius: var(--radius-sm);
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.product-status {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: var(--space-3);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--border);
+}
+
+.product-status-indicator {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+}
+
+.product-status-indicator .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    transition: background var(--duration-fast);
+}
+
+.product-status-indicator .status-dot.active {
+    background: var(--success);
+    box-shadow: 0 0 6px var(--success);
+}
+
 .icon-button.small {
     width: 32px;
     height: 32px;
@@ -1783,6 +1976,61 @@ body {
 .icon-button.small svg {
     width: 16px;
     height: 16px;
+}
+
+/* Product Toggle Switch */
+.hub-toggle-container {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--bg-hover);
+    transition: var(--duration-fast);
+    border-radius: 24px;
+    border: 1px solid var(--border);
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 2px;
+    bottom: 2px;
+    background-color: var(--text-secondary);
+    transition: var(--duration-fast);
+    border-radius: 50%;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+    background-color: var(--success);
+    border-color: var(--success);
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+    transform: translateX(20px);
+    background-color: var(--text-primary);
 }
 
 /* Profile Hub Info */
