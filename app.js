@@ -633,36 +633,21 @@ function scanQRCode() {
         return;
     }
     
-    // Set prompt for better UX
     if (median.barcode.setPrompt) {
         median.barcode.setPrompt('Scan QR code on your Atlas product');
     }
     
-    median.qrcode.scan({
+    median.barcode.scan({
         callback: function(data) {
-            console.log('Scan result:', data);
-            
-            // Handle success - QR code
             if (data?.code) {
                 handleScanResult({ success: true, code: data.code, type: data.type || 'qr' });
-            } 
-            // Handle cancellation or error
-            else if (data?.cancelled || data?.error) {
+            } else if (data?.cancelled || data?.error) {
                 if (DOM.scanStatus) {
                     DOM.scanStatus.textContent = 'Scan cancelled. You can try again or enter code manually.';
                     DOM.scanStatus.className = 'status-text';
                 }
-                // Show manual entry as fallback
                 if (DOM.manualEntryContainer) {
                     DOM.manualEntryContainer.style.display = 'flex';
-                }
-            }
-            // Unknown response - log for debugging
-            else {
-                console.log('Unexpected scan response:', JSON.stringify(data));
-                if (DOM.scanStatus) {
-                    DOM.scanStatus.textContent = 'Scan completed. Check if code was captured.';
-                    DOM.scanStatus.className = 'status-text';
                 }
             }
         }
