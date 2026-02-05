@@ -482,7 +482,7 @@ function determineAuthScreen() {
     } else if (AppState.hasAccount) {
         showSignin();
     } else {
-        showSignup();
+        showSignin();
     }
 }
 
@@ -1269,7 +1269,7 @@ function clearAccountAndLogout() {
     AppState.userProfile = { name: '', email: '', address: '' };
     AppState.products = [];
     
-    showSignup();
+    showSignin();
 }
 
 // ============================================
