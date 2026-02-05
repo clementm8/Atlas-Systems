@@ -1252,7 +1252,8 @@ body {
     margin-bottom: var(--space-4);
 }
 
-.modal-body select {
+.modal-body select,
+.form-select {
     width: 100%;
     padding: var(--space-3) var(--space-4);
     background: var(--bg-base);
@@ -1262,9 +1263,16 @@ body {
     font-size: var(--text-base);
     color: var(--text-primary);
     cursor: pointer;
+    transition: border-color var(--duration-fast);
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23a1a1aa' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right var(--space-3) center;
+    padding-right: var(--space-10);
 }
 
-.modal-body select:focus {
+.modal-body select:focus,
+.form-select:focus {
     outline: none;
     border-color: var(--accent);
 }
@@ -1285,6 +1293,38 @@ body {
 .modal-body textarea:focus {
     outline: none;
     border-color: var(--accent);
+}
+
+.modal-body input[type="text"] {
+    width: 100%;
+    padding: var(--space-3) var(--space-4);
+    background: var(--bg-base);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-family: inherit;
+    font-size: var(--text-base);
+    color: var(--text-primary);
+    transition: border-color var(--duration-fast);
+}
+
+.modal-body input[type="text"]:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.modal-body input[type="text"]::placeholder {
+    color: var(--text-muted);
+}
+
+.modal-actions {
+    display: flex;
+    gap: var(--space-3);
+    padding: var(--space-5);
+    border-top: 1px solid var(--border);
+}
+
+.modal-actions .primary-button {
+    flex: 1;
 }
 
 .modal-footer {

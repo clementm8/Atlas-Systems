@@ -48,11 +48,7 @@ const AppState = {
     systemArmed: true,
     
     // Editing state
-    editingActivityId: null,
-    
-    // Push
-    pushRegistered: false,
-    playerId: null
+    editingActivityId: null
 };
 
 // ============================================
@@ -76,6 +72,7 @@ const DOM = {
     signupEmail: document.getElementById('signup-email'),
     signupPassword: document.getElementById('signup-password'),
     signupConfirm: document.getElementById('signup-confirm'),
+    signupAddress: document.getElementById('signup-address'),
     signupBiometricOption: document.getElementById('signup-biometric-option'),
     signupEnableBiometric: document.getElementById('signup-enable-biometric'),
     signupBiometricText: document.getElementById('signup-biometric-text'),
@@ -113,9 +110,7 @@ const DOM = {
     activityCount: document.getElementById('activity-count'),
     addNoteBtn: document.getElementById('add-note-btn'),
     lockBtn: document.getElementById('lock-btn'),
-    notificationsBtn: document.getElementById('notifications-btn'),
     profileBtn: document.getElementById('profile-btn'),
-    notificationBadge: document.getElementById('notification-badge'),
     
     // Quick Actions
     armBtn: document.getElementById('arm-btn'),
@@ -135,7 +130,6 @@ const DOM = {
     noteForm: document.getElementById('note-form'),
     noteId: document.getElementById('note-id'),
     eventType: document.getElementById('event-type'),
-    noteTitle: document.getElementById('note-title'),
     noteContent: document.getElementById('note-content'),
     noteLocation: document.getElementById('note-location'),
     closeModalBtn: document.getElementById('close-modal-btn'),
@@ -148,13 +142,7 @@ const DOM = {
     userName: document.getElementById('user-name'),
     userEmail: document.getElementById('user-email'),
     userAddress: document.getElementById('user-address'),
-    
-    // Notifications Panel
-    notificationsPanel: document.getElementById('notifications-panel'),
-    closePanelBtn: document.getElementById('close-panel-btn'),
-    pushPermission: document.getElementById('push-permission'),
-    playerId: document.getElementById('player-id'),
-    registerPushBtn: document.getElementById('register-push-btn'),
+    profileAddressDisplay: document.getElementById('profile-address-display'),
     
     // Toast
     toastContainer: document.getElementById('toast-container')
@@ -405,12 +393,9 @@ function determineAuthScreen() {
 
 function checkMedianEnvironment() {
     AppState.isMedianApp = typeof median !== 'undefined' && median !== null;
-    console.log('Running in Median:', AppState.isMedianApp);
     
     if (AppState.isMedianApp) {
         initBiometrics();
-        // Push Notifications disabled - requires paid Apple Developer account
-        // initPushNotifications();
     } else {
         // Browser fallback
         DOM.browserFallback.style.display = 'block';
@@ -429,7 +414,6 @@ async function initBiometrics() {
         // median.auth.status() returns:
         // { hasTouchId: bool, biometryType: 'touchId'|'faceId'|'none', hasSecret: bool }
         const status = await median.auth.status();
-        console.log('Biometric status:', status);
         
         AppState.biometricAvailable = status.hasTouchId; // true if ANY biometrics available
         AppState.hasBiometrics = status.hasSecret;
@@ -440,8 +424,6 @@ async function initBiometrics() {
         } else if (status.biometryType === 'touchId') {
             AppState.biometricType = 'touchId';
         }
-        
-        console.log('Biometric type detected:', AppState.biometricType);
         
         // Update all biometric text elements after detection
         updateAllBiometricText();
@@ -490,8 +472,6 @@ async function authenticateWithBiometrics() {
         const result = await median.auth.get();
         
         if (result.success && result.secret) {
-            console.log('Biometric auth successful');
-            
             // Parse saved credentials
             const credentials = JSON.parse(result.secret);
             
@@ -545,7 +525,6 @@ async function saveCredentialsWithBiometrics(name, email, password) {
         
         if (result.success) {
             AppState.hasBiometrics = true;
-            console.log('Credentials saved with biometrics');
             return true;
         }
     } catch (error) {
@@ -566,6 +545,7 @@ async function handleSignup(e) {
     const email = DOM.signupEmail.value.trim();
     const password = DOM.signupPassword.value;
     const confirmPassword = DOM.signupConfirm.value;
+    const address = DOM.signupAddress.value.trim();
     const enableBiometric = DOM.signupEnableBiometric?.checked ?? false;
     
     // Validation
@@ -623,7 +603,7 @@ async function handleSignup(e) {
     AppState.hasAccount = true;
     
     // Save initial profile
-    AppState.userProfile = { name, email, address: '' };
+    AppState.userProfile = { name, email, address: address || '' };
     await saveUserProfileToStore();
     
     // Log security event
@@ -764,6 +744,9 @@ async function loadUserData() {
         DOM.userEmail.value = AppState.userProfile.email || AppState.savedAccount.email || '';
         DOM.userAddress.value = AppState.userProfile.address || '';
         
+        // Update profile info display
+        updateProfileInfoDisplay();
+        
     } catch (error) {
         console.error('Load user data error:', error);
     }
@@ -784,6 +767,13 @@ async function saveUserProfileToStore() {
     }
 }
 
+function updateProfileInfoDisplay() {
+    if (DOM.profileAddressDisplay) {
+        const address = AppState.userProfile.address;
+        DOM.profileAddressDisplay.textContent = address || 'Not set';
+    }
+}
+
 async function saveUserProfile(e) {
     e.preventDefault();
     
@@ -794,6 +784,7 @@ async function saveUserProfile(e) {
     };
     
     await saveUserProfileToStore();
+    updateProfileInfoDisplay();
     updateGreeting();
     closeProfilePanel();
     showToast('Profile saved successfully');
@@ -941,12 +932,11 @@ function openAddActivityModal() {
     DOM.modalTitle.textContent = 'Log Security Event';
     DOM.noteId.value = '';
     DOM.eventType.value = 'motion';
-    DOM.noteTitle.value = '';
     DOM.noteContent.value = '';
     DOM.noteLocation.value = '';
     DOM.deleteNoteBtn.style.display = 'none';
     DOM.noteModal.classList.add('active');
-    DOM.noteTitle.focus();
+    DOM.noteContent.focus();
 }
 
 function openEditActivityModal(activityId) {
@@ -957,12 +947,11 @@ function openEditActivityModal(activityId) {
     DOM.modalTitle.textContent = 'Edit Event';
     DOM.noteId.value = activity.id;
     DOM.eventType.value = activity.type;
-    DOM.noteTitle.value = activity.title;
     DOM.noteContent.value = activity.content;
     DOM.noteLocation.value = activity.location || '';
     DOM.deleteNoteBtn.style.display = 'block';
     DOM.noteModal.classList.add('active');
-    DOM.noteTitle.focus();
+    DOM.noteContent.focus();
 }
 
 function closeActivityModal() {
@@ -974,14 +963,24 @@ async function saveActivity(e) {
     e.preventDefault();
     
     const type = DOM.eventType.value;
-    const title = DOM.noteTitle.value.trim();
     const content = DOM.noteContent.value.trim();
     const location = DOM.noteLocation.value.trim();
     
-    if (!title || !content) {
+    if (!content) {
         showToast('Please fill in required fields', 'error');
         return;
     }
+    
+    // Generate title from event type
+    const typeLabels = {
+        motion: 'Motion Detected',
+        door: 'Door Activity',
+        camera: 'Camera Alert',
+        sensor: 'Sensor Trigger',
+        system: 'System Event',
+        custom: 'Custom Note'
+    };
+    const title = typeLabels[type] || 'Security Event';
     
     const now = Date.now();
     
@@ -1022,79 +1021,14 @@ function openProfilePanel() {
     DOM.userEmail.value = AppState.userProfile.email || AppState.savedAccount.email || '';
     DOM.userAddress.value = AppState.userProfile.address || '';
     
+    // Update profile info display
+    updateProfileInfoDisplay();
+    
     DOM.profilePanel.classList.add('active');
 }
 
 function closeProfilePanel() {
     DOM.profilePanel.classList.remove('active');
-}
-
-// ============================================
-// Push Notifications - DISABLED
-// Requires paid Apple Developer account ($99/year)
-// Uncomment and enable OneSignal in Median App Studio when ready
-// ============================================
-
-async function initPushNotifications() {
-    // DISABLED - Push Notifications require paid Apple Developer account
-    console.log('Push Notifications disabled - requires paid Apple Developer account');
-    return;
-    
-    /* Original implementation:
-    if (!AppState.isMedianApp) {
-        DOM.pushPermission.textContent = 'Requires Median app';
-        return;
-    }
-    
-    try {
-        const info = await median.onesignal.info();
-        console.log('OneSignal info:', info);
-        
-        if (info && info.oneSignalUserId) {
-            AppState.pushRegistered = true;
-            AppState.playerId = info.oneSignalUserId;
-            DOM.pushPermission.textContent = 'Enabled';
-            DOM.pushPermission.className = 'status-value granted';
-            DOM.playerId.textContent = info.oneSignalUserId;
-            DOM.registerPushBtn.textContent = 'Alerts Enabled';
-            DOM.registerPushBtn.disabled = true;
-            DOM.notificationBadge.classList.remove('hidden');
-        } else {
-            DOM.pushPermission.textContent = 'Not enabled';
-            DOM.playerId.textContent = 'Not registered';
-        }
-        
-        setupNotificationHandler();
-    } catch (error) {
-        console.error('Push init error:', error);
-        DOM.pushPermission.textContent = 'Error';
-        DOM.pushPermission.className = 'status-value denied';
-    }
-    */
-}
-
-async function registerPushNotifications() {
-    // DISABLED - Push Notifications require paid Apple Developer account
-    showToast('Push Notifications require Apple Developer Program', 'error');
-    return;
-}
-
-function setupNotificationHandler() {
-    // DISABLED - Push Notifications require paid Apple Developer account
-    return;
-}
-
-// ============================================
-// Notifications Panel - DISABLED
-// ============================================
-
-function openNotificationsPanel() {
-    // DISABLED
-    showToast('Push Notifications disabled for this build', 'error');
-}
-
-function closeNotificationsPanel() {
-    // DISABLED - panel is commented out in HTML
 }
 
 // ============================================
@@ -1141,7 +1075,7 @@ function updateActivityBadge() {
 }
 
 // ============================================
-// Clear Account (for testing)
+// Account Management
 // ============================================
 
 function clearAccountAndLogout() {
@@ -1183,7 +1117,6 @@ function initEventListeners() {
     // Dashboard
     DOM.lockBtn?.addEventListener('click', lockApp);
     DOM.addNoteBtn?.addEventListener('click', openAddActivityModal);
-    // DOM.notificationsBtn?.addEventListener('click', openNotificationsPanel); // DISABLED - Push requires paid Apple Developer
     DOM.profileBtn?.addEventListener('click', openProfilePanel);
     
     // Quick Actions
@@ -1205,20 +1138,14 @@ function initEventListeners() {
     DOM.closeProfileBtn?.addEventListener('click', closeProfilePanel);
     DOM.profileForm?.addEventListener('submit', saveUserProfile);
     
-    // Notifications Panel - DISABLED (Push requires paid Apple Developer account)
-    // DOM.closePanelBtn?.addEventListener('click', closeNotificationsPanel);
-    // DOM.registerPushBtn?.addEventListener('click', registerPushNotifications);
-    
     // Close on backdrop
     DOM.noteModal?.addEventListener('click', (e) => { if (e.target === DOM.noteModal) closeActivityModal(); });
-    // DOM.notificationsPanel?.addEventListener('click', (e) => { if (e.target === DOM.notificationsPanel) closeNotificationsPanel(); }); // DISABLED
     DOM.profilePanel?.addEventListener('click', (e) => { if (e.target === DOM.profilePanel) closeProfilePanel(); });
     
     // Escape key
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             if (DOM.noteModal?.classList.contains('active')) closeActivityModal();
-            // if (DOM.notificationsPanel?.classList.contains('active')) closeNotificationsPanel(); // DISABLED
             if (DOM.profilePanel?.classList.contains('active')) closeProfilePanel();
         }
     });
@@ -1229,11 +1156,9 @@ function initEventListeners() {
 // ============================================
 
 function init() {
-    console.log('Atlas Systems initializing...');
     initEventListeners();
     checkMedianEnvironment();
     showScreen('lock-screen');
-    console.log('Atlas Systems ready');
 }
 
 if (document.readyState === 'loading') {
