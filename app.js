@@ -3,7 +3,7 @@
  * 
  * Demonstrates integration with Median.co plugins:
  * - Biometric Authentication (Face ID / Touch ID)
- * - QR Code Scanner (Device registration)
+ * - QR Scanner (Device registration)
  * 
  * Flow:
  * 1. First time user → Sign Up → Add Device (scan QR code) → Dashboard
@@ -622,7 +622,7 @@ async function saveCredentialsWithBiometrics(name, email, password) {
 }
 
 // ============================================
-// QR Code Scanner
+// QR Scanner
 // ============================================
 
 function scanQRCode() {
@@ -638,13 +638,13 @@ function scanQRCode() {
         median.barcode.setPrompt('Scan QR code on your Atlas product');
     }
     
-    median.barcode.scan({
+    median.qrcode.scan({
         callback: function(data) {
             console.log('Scan result:', data);
             
-            // Handle success - QR code only
+            // Handle success - QR code
             if (data?.code) {
-                handleScanResult({ success: true, code: data.code, type: 'qr' });
+                handleScanResult({ success: true, code: data.code, type: data.type || 'qr' });
             } 
             // Handle cancellation or error
             else if (data?.cancelled || data?.error) {
@@ -1144,7 +1144,7 @@ function toggleProductStatus(productId) {
 
 function handleAddDeviceClick() {
     if (AppState.isMedianApp) {
-        // In Median app, use QR code scanner
+        // In Median app, use QR scanner
         scanQRCode();
     } else {
         // In browser, open manual entry modal

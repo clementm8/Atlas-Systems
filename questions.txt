@@ -6,7 +6,7 @@ Customer profile:
 
 Why I chose this site
 - I chose this site because it had a really strong use case for the plugins i want to implement
-- We are improving the login and device registration process using the biometric auth and qrcode scanner plugins
+- We are improving the login and device registration process using the biometric auth and QR code scanner plugins
 - The goals are to improve the user experience and accessibility while keeping the current look and feel of the site
 
 
@@ -88,7 +88,7 @@ This app displays the content that is on your website, but uses our platform to 
 The biometric authentication allows users to login with a scan of their face or fingerprint, reducing any friction and making the login process much faster and secure
 The QR code scanner uses the device's camera to scan and register Atlas products, 85% faster than the current process of entering a 12 digit code.
 
-Both of these features are built into your current flow, keeping the user experience identical. The option for biometric authentication and qrcode scanner only appear if their device supports it, otherwise users will be presented with the current flow of username/password and entering device code for activation.
+Both of these features are built into your current flow, keeping the user experience identical. The option for biometric authentication and QR code scanner only appear if their device supports it, otherwise users will be presented with the current flow of username/password and entering device code for activation.
 
 
 - No app and user data is saved on our servers, everything goes straight from your website to the app
