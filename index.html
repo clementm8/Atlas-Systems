@@ -7,6 +7,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Atlas Systems</title>
     <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -513,5 +514,17 @@
 
 
     <script src="app.js"></script>
+    <script>
+        window.OneSignalDeferred = window.OneSignalDeferred || [];
+        OneSignalDeferred.push(async function(OneSignal) {
+            await OneSignal.init({
+                appId: "35c465fc-3af5-43cd-bef5-42f0f55afbe3",
+                safari_web_id: "web.onesignal.auto.32d8157c-f1d5-44ab-a783-bc048d3cd7fd",
+                notifyButton: {
+                    enable: true,
+                },
+            });
+        });
+    </script>
 </body>
 </html>
