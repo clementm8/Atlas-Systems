@@ -1,13 +1,12 @@
 /**
  * Atlas Systems - Home Security System
- * 
- * Demonstrates integration with Median.co plugins:
- * - Biometric Authentication (Face ID / Touch ID)
- * - QR Scanner (Device registration)
- * 
+ *
  * Flow:
- * 1. First time user → Sign Up → Add Device (scan QR code) → Dashboard
+ * 1. First time user → Sign Up → Add Device → Dashboard
  * 2. Returning user → Sign In / Biometric → Dashboard
+ *
+ * Median bridge calls (biometric auth) are handled
+ * entirely via external Custom HTML tags.
  */
 
 // ============================================
@@ -15,18 +14,12 @@
 // ============================================
 
 const AppState = {
-    isMedianApp: false,
     isAuthenticated: false,
-    
+
     // Account status
     hasAccount: false,
-    hasBiometrics: false,
     hasDevice: false,
-    
-    // Biometrics info
-    biometricAvailable: false,
-    biometricType: 'biometrics',
-    
+
     // User profile (localStorage)
     userProfile: {
         name: '',
@@ -37,7 +30,7 @@ const AppState = {
     // Registered Atlas products
     products: [],
     
-    // Pending product (during scan/add flow)
+    // Pending product (during add-device flow)
     pendingProduct: null,
     
     // Activity log
@@ -69,9 +62,6 @@ const DOM = {
     signupAddress: document.getElementById('signup-address'),
     signupPassword: document.getElementById('signup-password'),
     signupConfirm: document.getElementById('signup-confirm'),
-    signupBiometricOption: document.getElementById('signup-biometric-option'),
-    signupEnableBiometric: document.getElementById('signup-enable-biometric'),
-    signupBiometricText: document.getElementById('signup-biometric-text'),
     signupSubmitBtn: document.getElementById('signup-submit-btn'),
     signupStatus: document.getElementById('signup-status'),
     toggleSignupPassword: document.getElementById('toggle-signup-password'),
@@ -84,9 +74,7 @@ const DOM = {
     loginSubmitBtn: document.getElementById('login-submit-btn'),
     loginStatus: document.getElementById('login-status'),
     togglePassword: document.getElementById('toggle-password'),
-    biometricOption: document.getElementById('biometric-option'),
     rememberBiometric: document.getElementById('remember-biometric'),
-    biometricTypeText: document.getElementById('biometric-type-text'),
     switchToSignup: document.getElementById('switch-to-signup'),
     
     // Biometric Unlock
@@ -99,7 +87,6 @@ const DOM = {
     useDifferentAccount: document.getElementById('use-different-account'),
     
     // Add Device Screen
-    scanDeviceBtn: document.getElementById('scan-device-btn'),
     scanStatus: document.getElementById('scan-status'),
     scannedDevicePreview: document.getElementById('scanned-device-preview'),
     deviceCode: document.getElementById('device-code'),
@@ -240,26 +227,14 @@ function hideAllAuthContainers() {
 function showSignup() {
     hideAllAuthContainers();
     DOM.signupContainer.style.display = 'block';
-    
-    if (AppState.biometricAvailable && AppState.isMedianApp) {
-        DOM.signupBiometricOption.style.display = 'block';
-        updateBiometricText(DOM.signupBiometricText, 'Enable');
-    } else {
-        DOM.signupBiometricOption.style.display = 'none';
-    }
 }
 
 function showSignin() {
     hideAllAuthContainers();
     DOM.signinContainer.style.display = 'block';
-    
+
     if (AppState.userProfile.email) {
         DOM.loginEmail.value = AppState.userProfile.email;
-    }
-    
-    if (AppState.biometricAvailable) {
-        DOM.biometricOption.style.display = 'block';
-        updateBiometricText(DOM.biometricTypeText, 'Remember with');
     }
 }
 
@@ -267,63 +242,12 @@ function showBiometricUnlock() {
     hideAllAuthContainers();
     DOM.biometricUnlockContainer.style.display = 'flex';
     DOM.biometricUnlockContainer.style.flexDirection = 'column';
-    
+
     const displayName = AppState.userProfile.name;
-    if (displayName) {
-        DOM.savedUserName.textContent = `Welcome back, ${displayName.split(' ')[0]}`;
-    } else {
-        DOM.savedUserName.textContent = 'Welcome back';
-    }
+    DOM.savedUserName.textContent = displayName
+        ? `Welcome back, ${displayName.split(' ')[0]}`
+        : 'Welcome back';
     DOM.savedUserEmail.style.display = 'none';
-    
-    updateUnlockButtonIcon();
-}
-
-function updateUnlockButtonIcon() {
-    const iconContainer = document.querySelector('.fingerprint-icon');
-    if (!iconContainer) return;
-    
-    if (AppState.biometricType === 'faceId') {
-        iconContainer.innerHTML = `
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M3 7V5a2 2 0 0 1 2-2h2"/>
-                <path d="M17 3h2a2 2 0 0 1 2 2v2"/>
-                <path d="M21 17v2a2 2 0 0 1-2 2h-2"/>
-                <path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
-                <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
-                <path d="M9 9h.01"/>
-                <path d="M15 9h.01"/>
-            </svg>
-        `;
-        DOM.unlockText.textContent = 'Unlock with Face ID';
-    } else if (AppState.biometricType === 'touchId') {
-        iconContainer.innerHTML = `
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                <path d="M2 12C2 6.5 6.5 2 12 2a10 10 0 0 1 8 4"/>
-                <path d="M5 19.5C5.5 18 6 15 6 12c0-.7.12-1.37.34-2"/>
-                <path d="M17.29 21.02c.12-.6.43-2.3.5-3.02"/>
-                <path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4"/>
-                <path d="M8.65 22c.21-.66.45-1.32.57-2"/>
-                <path d="M14 13.12c0 2.38 0 6.38-1 8.88"/>
-                <path d="M2 16h.01"/>
-                <path d="M21.8 16c.2-2 .131-5.354 0-6"/>
-                <path d="M9 6.8a6 6 0 0 1 9 5.2c0 .47 0 1.17-.02 2"/>
-            </svg>
-        `;
-        DOM.unlockText.textContent = 'Unlock with Touch ID';
-    } else {
-        DOM.unlockText.textContent = 'Unlock with Biometrics';
-    }
-}
-
-function updateBiometricText(element, prefix) {
-    if (AppState.biometricType === 'faceId') {
-        element.textContent = `${prefix} Face ID`;
-    } else if (AppState.biometricType === 'touchId') {
-        element.textContent = `${prefix} Touch ID`;
-    } else {
-        element.textContent = `${prefix} Biometrics`;
-    }
 }
 
 function lockApp() {
@@ -344,7 +268,7 @@ function unlockApp() {
 
 function updateAddDeviceButton() {
     if (DOM.addDeviceText) {
-        DOM.addDeviceText.textContent = AppState.isMedianApp ? 'Scan Product' : 'Add Product';
+        DOM.addDeviceText.textContent = 'Add Product';
     }
 }
 
@@ -460,199 +384,25 @@ function determineAuthScreen() {
     if (savedAccountData) {
         AppState.hasAccount = true;
     }
-    
+
     const savedProfile = localStorage.getItem('atlas_user_profile');
     if (savedProfile) {
         AppState.userProfile = JSON.parse(savedProfile);
     }
-    
+
     const savedProducts = localStorage.getItem('atlas_products');
     if (savedProducts) {
         AppState.products = JSON.parse(savedProducts);
-        // Ensure status defaults to offline for each product
-        AppState.products.forEach(p => {
-            if (!p.status) p.status = 'offline';
-        });
+        AppState.products.forEach(p => { if (!p.status) p.status = 'offline'; });
         AppState.hasDevice = AppState.products.length > 0;
     }
-    
-    if (AppState.hasBiometrics && AppState.hasAccount) {
-        showBiometricUnlock();
-        setTimeout(() => authenticateWithBiometrics(), 600);
-    } else if (AppState.hasAccount) {
-        showSignin();
-    } else {
-        showSignin();
-    }
+
+    showSignin();
 }
 
 // ============================================
-// Median Detection & Initialization
+// Add device (manual product code)
 // ============================================
-
-function checkMedianEnvironment() {
-    AppState.isMedianApp = typeof median !== 'undefined' && median !== null;
-    
-    if (AppState.isMedianApp) {
-        initBiometrics();
-    } else {
-        determineAuthScreen();
-    }
-}
-
-// ============================================
-// Biometric Authentication
-// ============================================
-
-async function initBiometrics() {
-    if (!AppState.isMedianApp) return;
-    
-    try {
-        const status = await median.auth.status();
-        
-        AppState.biometricAvailable = status.hasTouchId;
-        AppState.hasBiometrics = status.hasSecret;
-        
-        if (status.biometryType === 'faceId') {
-            AppState.biometricType = 'faceId';
-        } else if (status.biometryType === 'touchId') {
-            AppState.biometricType = 'touchId';
-        }
-        
-        updateAllBiometricText();
-        updateUnlockButtonIcon();
-        determineAuthScreen();
-        
-    } catch (error) {
-        console.error('Biometric init error:', error);
-        determineAuthScreen();
-    }
-}
-
-function updateAllBiometricText() {
-    if (DOM.signupBiometricText) {
-        updateBiometricText(DOM.signupBiometricText, 'Enable');
-    }
-    if (DOM.biometricTypeText) {
-        updateBiometricText(DOM.biometricTypeText, 'Remember with');
-    }
-    if (DOM.unlockText) {
-        if (AppState.biometricType === 'faceId') {
-            DOM.unlockText.textContent = 'Unlock with Face ID';
-        } else if (AppState.biometricType === 'touchId') {
-            DOM.unlockText.textContent = 'Unlock with Touch ID';
-        } else {
-            DOM.unlockText.textContent = 'Unlock with Biometrics';
-        }
-    }
-}
-
-async function authenticateWithBiometrics() {
-    if (!AppState.isMedianApp || !AppState.biometricAvailable) {
-        showSignin();
-        return;
-    }
-    
-    DOM.biometricStatus.textContent = 'Authenticating...';
-    DOM.biometricStatus.className = 'status-text';
-    
-    try {
-        const result = await median.auth.get();
-        
-        if (result.success && result.secret) {
-            const credentials = JSON.parse(result.secret);
-            
-            if (credentials.email) {
-                AppState.userProfile.email = credentials.email;
-            }
-            if (credentials.name) {
-                AppState.userProfile.name = credentials.name;
-            }
-            
-            DOM.biometricStatus.textContent = 'Authentication successful!';
-            DOM.biometricStatus.className = 'status-text success';
-            
-            logActivity('system', 'Biometric Login', 
-                `User authenticated via ${AppState.biometricType === 'faceId' ? 'Face ID' : 'Touch ID'}`);
-            
-            setTimeout(() => {
-                unlockApp();
-            }, 300);
-        } else {
-            DOM.biometricStatus.textContent = 'Authentication failed. Try again.';
-            DOM.biometricStatus.className = 'status-text error';
-        }
-    } catch (error) {
-        console.error('Biometric auth error:', error);
-        
-        if (error.message && error.message.includes('cancel')) {
-            DOM.biometricStatus.textContent = 'Authentication cancelled';
-            DOM.biometricStatus.className = 'status-text';
-        } else {
-            DOM.biometricStatus.textContent = 'Authentication failed. Use password instead.';
-            DOM.biometricStatus.className = 'status-text error';
-        }
-    }
-}
-
-async function saveCredentialsWithBiometrics(name, email, password) {
-    if (!AppState.isMedianApp || !AppState.biometricAvailable) {
-        return false;
-    }
-    
-    try {
-        const credentials = JSON.stringify({
-            name: name,
-            email: email,
-            password: password,
-            savedAt: Date.now()
-        });
-        
-        const result = await median.auth.save({ secret: credentials });
-        
-        if (result.success) {
-            AppState.hasBiometrics = true;
-            return true;
-        }
-    } catch (error) {
-        console.error('Save biometric credentials error:', error);
-    }
-    
-    return false;
-}
-
-// ============================================
-// QR Scanner
-// ============================================
-
-function scanQRCode() {
-    if (!AppState.isMedianApp) {
-        // Demo mode - simulate a scan
-        const demoCode = 'ATLAS-' + Math.random().toString(36).substring(2, 10).toUpperCase();
-        handleScanResult({ success: true, code: demoCode });
-        return;
-    }
-    
-    if (median.barcode.setPrompt) {
-        median.barcode.setPrompt('Scan QR code on your Atlas product');
-    }
-    
-    median.barcode.scan({
-        callback: function(data) {
-            if (data?.code) {
-                handleScanResult({ success: true, code: data.code, type: data.type || 'qr' });
-            } else if (data?.cancelled || data?.error) {
-                if (DOM.scanStatus) {
-                    DOM.scanStatus.textContent = 'Scan cancelled. You can try again or enter code manually.';
-                    DOM.scanStatus.className = 'status-text';
-                }
-                if (DOM.manualEntryContainer) {
-                    DOM.manualEntryContainer.style.display = 'flex';
-                }
-            }
-        }
-    });
-}
 
 function handleManualEntry() {
     const name = DOM.manualNameInput?.value.trim();
@@ -664,8 +414,7 @@ function handleManualEntry() {
         return;
     }
     
-    // Process manual entry the same way as scanned code
-    handleScanResult({ success: true, code: code, name: name, type: 'manual' });
+    handleScanResult({ success: true, code: code, name: name });
     DOM.manualNameInput.value = '';
     DOM.manualCodeInput.value = '';
 }
@@ -693,14 +442,12 @@ function handleScanResult(data) {
             DOM.deviceNameInput.focus();
         }
         DOM.scannedDevicePreview.style.display = 'block';
-        DOM.scanStatus.textContent = data.type === 'manual' ? 'Code entered!' : 'Device found!';
+        DOM.scanStatus.textContent = 'Code entered!';
         DOM.scanStatus.className = 'status-text success';
         
-        // Log the entry
-        const logType = data.type === 'manual' ? 'Device Entered' : 'Device Scanned';
-        logActivity('scan', logType, `${data.type === 'manual' ? 'Entered' : 'Scanned'} device code: ${data.code}`);
+        logActivity('scan', 'Device Entered', `Entered device code: ${data.code}`);
     } else {
-        DOM.scanStatus.textContent = data.error || 'No QR code detected. Try again.';
+        DOM.scanStatus.textContent = data.error || 'Could not add device. Try again.';
         DOM.scanStatus.className = 'status-text error';
     }
 }
@@ -744,8 +491,7 @@ async function handleSignup(e) {
     const address = DOM.signupAddress.value.trim();
     const password = DOM.signupPassword.value;
     const confirmPassword = DOM.signupConfirm.value;
-    const enableBiometric = DOM.signupEnableBiometric?.checked ?? false;
-    
+
     if (!name || !email || !password) {
         DOM.signupStatus.textContent = 'Please fill in all fields';
         DOM.signupStatus.className = 'status-text error';
@@ -772,16 +518,7 @@ async function handleSignup(e) {
     DOM.signupStatus.textContent = '';
     
     await new Promise(resolve => setTimeout(resolve, 500));
-    
-    if (enableBiometric && AppState.biometricAvailable && AppState.isMedianApp) {
-        DOM.signupSubmitBtn.innerHTML = `
-            <svg class="spinner" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
-            Setting up ${AppState.biometricType === 'faceId' ? 'Face ID' : 'Touch ID'}...
-        `;
-        
-        await saveCredentialsWithBiometrics(name, email, password);
-    }
-    
+
     // Save account
     const accountData = { name, email, createdAt: Date.now() };
     localStorage.setItem('atlas_account', JSON.stringify(accountData));
@@ -822,8 +559,7 @@ async function handleSignin(e) {
     
     const email = DOM.loginEmail.value.trim();
     const password = DOM.loginPassword.value;
-    const rememberWithBiometric = DOM.rememberBiometric?.checked ?? false;
-    
+
     if (!email || !password) {
         DOM.loginStatus.textContent = 'Please enter email and password';
         DOM.loginStatus.className = 'status-text error';
@@ -848,11 +584,7 @@ async function handleSignin(e) {
         
         const accountData = { name: AppState.userProfile.name, email, createdAt: Date.now() };
         localStorage.setItem('atlas_account', JSON.stringify(accountData));
-        
-        if (rememberWithBiometric && AppState.biometricAvailable && AppState.isMedianApp) {
-            await saveCredentialsWithBiometrics(AppState.userProfile.name, email, password);
-        }
-        
+
         logActivity('system', 'Password Login', 'User authenticated with email/password');
         
         DOM.loginForm.reset();
@@ -1128,13 +860,7 @@ function toggleProductStatus(productId) {
 // ============================================
 
 function handleAddDeviceClick() {
-    if (AppState.isMedianApp) {
-        // In Median app, use QR scanner
-        scanQRCode();
-    } else {
-        // In browser, open manual entry modal
-        openAddProductModal();
-    }
+    openAddProductModal();
 }
 
 function openAddProductModal() {
@@ -1261,7 +987,6 @@ function initEventListeners() {
     DOM.useDifferentAccount?.addEventListener('click', clearAccountAndLogout);
     
     // Add Device Screen
-    DOM.scanDeviceBtn?.addEventListener('click', scanQRCode);
     DOM.confirmDeviceBtn?.addEventListener('click', confirmDevice);
     DOM.submitManualCodeBtn?.addEventListener('click', handleManualEntry);
     DOM.manualCodeInput?.addEventListener('keydown', (e) => {
@@ -1319,13 +1044,12 @@ function initEventListeners() {
     });
 }
 
-// ============================================
 // Initialize
 // ============================================
 
 function init() {
     initEventListeners();
-    checkMedianEnvironment();
+    determineAuthScreen();
     showScreen('lock-screen');
 }
 

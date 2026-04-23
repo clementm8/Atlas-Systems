@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','GTM-T724HHWQ');</script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atlas Systems · Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-base: #09090b;
+            --bg-surface: #18181b;
+            --bg-elevated: #27272a;
+            --bg-hover: #3f3f46;
+            --text-primary: #fafafa;
+            --text-secondary: #a1a1aa;
+            --text-muted: #71717a;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --accent-muted: rgba(59, 130, 246, 0.15);
+            --success: #22c55e;
+            --warning: #eab308;
+            --border: #27272a;
+            --radius-md: 8px;
+            --radius-lg: 12px;
+            --radius-full: 9999px;
+            --font-sans: 'Sora', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html, body {
+            min-height: 100%;
+            background: var(--bg-base);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            font-weight: 300;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        button { font-family: inherit; }
+
+        /* Header */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 32px;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-surface);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo {
+            width: 32px;
+            height: 32px;
+            color: var(--accent);
+        }
+
+        .header-text h1 {
+            font-size: 1rem;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+        }
+
+        .header-text .greeting {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .icon-btn {
+            width: 36px;
+            height: 36px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .icon-btn:hover {
+            background: var(--bg-elevated);
+            color: var(--text-primary);
+        }
+
+        .icon-btn svg { width: 18px; height: 18px; }
+
+        /* Layout */
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 32px;
+        }
+
+        @media (max-width: 600px) {
+            .header { padding: 16px 20px; }
+            .container { padding: 20px; }
+        }
+
+        /* Welcome */
+        .welcome {
+            margin-bottom: 28px;
+        }
+
+        .welcome h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+            letter-spacing: -0.01em;
+        }
+
+        .welcome p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Stats grid */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+
+        .stat-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 18px;
+        }
+
+        .stat-card .label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 10px;
+        }
+
+        .stat-card .label svg { width: 14px; height: 14px; }
+
+        .stat-card .value {
+            font-size: 1.6rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+        }
+
+        .stat-card .meta {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .stat-card .meta.up { color: var(--success); }
+
+        /* Section */
+        .section {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 22px;
+            margin-bottom: 20px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .section-header h3 {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .section-header .link {
+            background: none;
+            border: none;
+            color: var(--accent);
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+
+        .section-header .link:hover { text-decoration: underline; }
+
+        /* Products */
+        .product {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px;
+            border-radius: var(--radius-md);
+            transition: background 0.15s ease;
+        }
+
+        .product:hover { background: var(--bg-elevated); }
+
+        .product + .product { margin-top: 4px; }
+
+        .product-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: var(--radius-md);
+            background: var(--accent-muted);
+            color: var(--accent);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .product-icon svg { width: 20px; height: 20px; }
+
+        .product-info { flex: 1; min-width: 0; }
+
+        .product-name {
+            font-weight: 500;
+            font-size: 0.9rem;
+            margin-bottom: 2px;
+        }
+
+        .product-meta {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+            padding: 4px 10px;
+            background: var(--bg-base);
+            border-radius: var(--radius-full);
+            border: 1px solid var(--border);
+        }
+
+        .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--success);
+            box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
+        }
+
+        .dot.warn { background: var(--warning); box-shadow: 0 0 8px rgba(234, 179, 8, 0.6); }
+
+        /* Quick actions */
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+        }
+
+        .action-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 18px 12px;
+            background: var(--bg-base);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .action-btn:hover {
+            background: var(--bg-elevated);
+            border-color: var(--accent);
+        }
+
+        .action-btn svg {
+            width: 22px;
+            height: 22px;
+            color: var(--accent);
+        }
+
+        /* Activity */
+        .activity-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .activity-item:last-child { border-bottom: none; }
+
+        .activity-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent);
+            margin-top: 8px;
+            flex-shrink: 0;
+        }
+
+        .activity-text {
+            flex: 1;
+            font-size: 0.85rem;
+            color: var(--text-primary);
+        }
+
+        .activity-time {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+    </style>
+</head>
+<body>
+    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-T724HHWQ"
+    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+
+    <header class="header">
+        <div class="header-left">
+            <svg class="logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/>
+                <line x1="12" y1="22" x2="12" y2="15.5"/>
+                <polyline points="22 8.5 12 15.5 2 8.5"/>
+                <polyline points="2 15.5 12 8.5 22 15.5"/>
+            </svg>
+            <div class="header-text">
+                <h1>Atlas Systems</h1>
+                <span class="greeting" id="user-greeting">Welcome back</span>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="icon-btn" title="Profile">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <circle cx="12" cy="8" r="4"/>
+                    <path d="M20 21a8 8 0 1 0-16 0"/>
+                </svg>
+            </button>
+            <button class="icon-btn" title="Notifications">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                </svg>
+            </button>
+            <button class="icon-btn" id="signout-btn" title="Sign out">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                    <polyline points="16 17 21 12 16 7"/>
+                    <line x1="21" y1="12" x2="9" y2="12"/>
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="welcome">
+            <h2 id="welcome-heading">Good day</h2>
+            <p>Here's what's happening with your home today.</p>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats">
+            <div class="stat-card">
+                <div class="label">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                    </svg>
+                    System Status
+                </div>
+                <div class="value">Armed</div>
+                <div class="meta up">All sensors online</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="10" r="6"/>
+                        <rect x="8" y="18" width="8" height="3" rx="1"/>
+                    </svg>
+                    Devices
+                </div>
+                <div class="value">4</div>
+                <div class="meta">3 active · 1 idle</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <polyline points="12 6 12 12 16 14"/>
+                    </svg>
+                    Events Today
+                </div>
+                <div class="value">12</div>
+                <div class="meta">Last: 2 min ago</div>
+            </div>
+        </div>
+
+        <!-- Devices -->
+        <div class="section">
+            <div class="section-header">
+                <h3>Your Devices</h3>
+                <button class="link">View all</button>
+            </div>
+
+            <div class="product">
+                <div class="product-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <circle cx="12" cy="10" r="6"/>
+                        <circle cx="12" cy="10" r="2"/>
+                        <rect x="8" y="18" width="8" height="3" rx="1"/>
+                    </svg>
+                </div>
+                <div class="product-info">
+                    <div class="product-name">Front Door Camera</div>
+                    <div class="product-meta">Online · 98% battery</div>
+                </div>
+                <span class="status-pill"><span class="dot"></span>Active</span>
+            </div>
+
+            <div class="product">
+                <div class="product-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                    </svg>
+                </div>
+                <div class="product-info">
+                    <div class="product-name">Smart Lock</div>
+                    <div class="product-meta">Locked · Last accessed 1h ago</div>
+                </div>
+                <span class="status-pill"><span class="dot"></span>Secure</span>
+            </div>
+
+            <div class="product">
+                <div class="product-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M12 2v6"/>
+                        <circle cx="12" cy="14" r="8"/>
+                    </svg>
+                </div>
+                <div class="product-info">
+                    <div class="product-name">Living Room Sensor</div>
+                    <div class="product-meta">Motion detected · 2m ago</div>
+                </div>
+                <span class="status-pill"><span class="dot warn"></span>Alert</span>
+            </div>
+        </div>
+
+        <!-- Quick actions -->
+        <div class="section">
+            <div class="section-header">
+                <h3>Quick Actions</h3>
+            </div>
+            <div class="quick-actions">
+                <button class="action-btn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <line x1="12" y1="5" x2="12" y2="19"/>
+                        <line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                    Add Device
+                </button>
+                <button class="action-btn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                    </svg>
+                    Arm System
+                </button>
+                <button class="action-btn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <circle cx="12" cy="12" r="10"/>
+                        <polyline points="12 6 12 12 16 14"/>
+                    </svg>
+                    View Events
+                </button>
+                <button class="action-btn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                    </svg>
+                    Settings
+                </button>
+            </div>
+        </div>
+
+        <!-- Recent activity -->
+        <div class="section">
+            <div class="section-header">
+                <h3>Recent Activity</h3>
+            </div>
+
+            <div class="activity-item">
+                <div class="activity-dot"></div>
+                <div>
+                    <div class="activity-text">Living Room Sensor detected motion</div>
+                    <div class="activity-time">2 minutes ago</div>
+                </div>
+            </div>
+            <div class="activity-item">
+                <div class="activity-dot"></div>
+                <div>
+                    <div class="activity-text">Smart Lock locked from app</div>
+                    <div class="activity-time">1 hour ago</div>
+                </div>
+            </div>
+            <div class="activity-item">
+                <div class="activity-dot"></div>
+                <div>
+                    <div class="activity-text">Front Door Camera came online</div>
+                    <div class="activity-time">3 hours ago</div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const user = sessionStorage.getItem('atlas_user_email');
+        if (user) {
+            document.getElementById('user-greeting').textContent = user;
+        }
+
+        const hour = new Date().getHours();
+        const greet =
+            hour < 12 ? 'Good morning' :
+            hour < 18 ? 'Good afternoon' : 'Good evening';
+        document.getElementById('welcome-heading').textContent = greet;
+
+        document.getElementById('signout-btn').addEventListener('click', () => {
+            sessionStorage.removeItem('atlas_user_email');
+            window.location.href = 'index.html';
+        });
+    </script>
+</body>
+</html>
