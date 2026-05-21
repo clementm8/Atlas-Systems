@@ -1,12 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-    })(window,document,'script','dataLayer','GTM-T724HHWQ');</script>
-
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Atlas Systems · Sign In</title>
@@ -137,9 +131,6 @@
     </style>
 </head>
 <body>
-    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-T724HHWQ"
-    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
-
     <main class="page">
         <div class="card">
             <h1>Sign in</h1>
@@ -164,31 +155,14 @@
     </main>
 
     <script>
-        window.dataLayer = window.dataLayer || [];
-
         document.getElementById('login-form').addEventListener('submit', (e) => {
             e.preventDefault();
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
             if (!email || !password) return;
 
-            window.dataLayer.push({
-                event: 'login_submit',
-                method: 'email',
-                user_email_hash: btoa(email).slice(0, 12)
-            });
-
             sessionStorage.setItem('atlas_user_email', email);
-
-            function goToDashboard() {
-                window.location.href = 'dashboard.html';
-            }
-
-            if (window.MedianBridge && typeof MedianBridge.runAuthSave === 'function') {
-                MedianBridge.runAuthSave(goToDashboard);
-            } else {
-                goToDashboard();
-            }
+            window.location.href = 'dashboard.html';
         });
     </script>
 </body>
